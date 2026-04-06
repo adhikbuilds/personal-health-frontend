@@ -1,0 +1,71 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  node-check:
+    name: "Node: syntax + deps"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+      - run: npm ci --ignore-scripts
+      - name: Syntax check server.js
+        run: node -c server.js
+
+  no-hardcoded-ips:
+    name: "Guard: no hardcoded IPs"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan views + server
+        run: |
+          if grep -rn "192\.168\.\|10\.0\.\|localhost:8082" views/ server.js --include="*.ejs" --include="*.js"; then
+            echo "::error::Hardcoded IP/port in frontend source!"
+            exit 1
+          fi
+          echo "Clean"
+
+  no-old-branding:
+    name: "Guard: no ActiveBharat"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan
+        run: |
+          if grep -ri "activebharat\|active.bharat" views/ server.js --include="*.ejs" --include="*.js" -l 2>/dev/null; then
+            echo "::error::Old branding found!"
+            exit 1
+          fi
+          echo "Clean"
+
+  structure:
+    name: "Guard: required files"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check structure
+        run: |
+          test -f server.js || (echo "::error::server.js missing" && exit 1)
+          test -d views || (echo "::error::views/ missing" && exit 1)
+          test -f views/index.ejs || (echo "::error::views/index.ejs missing" && exit 1)
+          test -f views/dashboard.ejs || (echo "::error::views/dashboard.ejs missing" && exit 1)
+          echo "Structure OK"
+
+  ci-pass:
+    name: "All checks passed"
+    needs: [node-check, no-hardcoded-ips, no-old-branding, structure]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Frontend CI passed. Safe to merge."
