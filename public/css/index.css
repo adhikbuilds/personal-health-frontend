@@ -198,6 +198,7 @@ main {
 }
 
 .feature-icon { font-size: 24px; margin-bottom: 12px; }
+.feature-icon-box { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.25); border-radius: 12px; margin-bottom: 14px; }
 
 .feature-card h3 {
   font-size: 15px;
