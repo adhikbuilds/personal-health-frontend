@@ -271,15 +271,17 @@
           <span class="lb-score">${s.latest_score != null ? s.latest_score.toFixed(1) : '—'}</span>
         </div>`).join('');
 
-      // Auto-connect to first active session if not already connected
-      if (!activeWS && sessions.length > 0) {
-        connectToSession(sessions[0].session_id);
+      // Auto-connect to first active session; reconnect if the session changed
+      const firstId = sessions[0].session_id;
+      if (currentSessionId !== firstId) {
+        connectToSession(firstId);
       }
     }
 
     // ── Live Session — auto-connects when phone session is detected ───────────
     function connectToSession(sessionId) {
       if (activeWS) activeWS.close();
+      currentSessionId = sessionId;
       document.getElementById('live-card').style.display = 'block';
       liveScoreHistory.length = 0;
       initLiveChart();
@@ -301,7 +303,7 @@
           fb.style.display = 'block';
         }
       };
-      activeWS.onclose = () => { activeWS = null; };
+      activeWS.onclose = () => { activeWS = null; currentSessionId = null; };
       activeWS.onerror = () => {};
     }
 
