@@ -1,0 +1,297 @@
+/* Personal Health Design Language v2 — PH-DLS v2
+ * Style: Modern Dark (Cinema Mobile) — sourced from UI/UX Pro Max
+ * Typography: Barlow Condensed + Barlow — sourced from UI/UX Pro Max sport pairing
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=Barlow:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600;800&display=swap');
+
+:root {
+  /* Backgrounds — gradient base, no pure #000 */
+  --ph-bg-deep:      #020203;
+  --ph-bg-base:      #050506;
+  --ph-bg-elevated:  #0a0a0c;
+  --ph-surface:      rgba(255, 255, 255, 0.05);
+  --ph-surface-2:    rgba(255, 255, 255, 0.08);
+  --ph-border:       rgba(255, 255, 255, 0.08);
+  --ph-border-2:     rgba(255, 255, 255, 0.16);
+
+  /* Brand — cyan continues from V1 */
+  --ph-brand:        #06b6d4;
+  --ph-brand-glow:   rgba(6, 182, 212, 0.20);
+  --ph-brand-deep:   #0891b2;
+
+  /* Performance — warm amber for personal-best moments */
+  --ph-pb:           #f59e0b;
+  --ph-pb-glow:      rgba(245, 158, 11, 0.18);
+
+  /* Status */
+  --ph-success:      #10b981;
+  --ph-success-glow: rgba(16, 185, 129, 0.18);
+  --ph-caution:      #f59e0b;
+  --ph-caution-glow: rgba(245, 158, 11, 0.18);
+  --ph-alert:        #ef4444;
+  --ph-alert-glow:   rgba(239, 68, 68, 0.20);
+  --ph-info:         #8b5cf6;
+  --ph-info-glow:    rgba(139, 92, 246, 0.18);
+
+  /* Text */
+  --ph-text:         #ededef;
+  --ph-text-muted:   #8a8f98;
+  --ph-text-dim:     #5a5e66;
+
+  /* Typography */
+  --font-display: 'Barlow Condensed', system-ui, -apple-system, sans-serif;
+  --font-body:    'Barlow', system-ui, -apple-system, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+
+  /* Radius */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 20px;
+  --r-pill: 999px;
+
+  /* Spacing */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --sp-8: 64px;
+
+  /* Easing */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Shadow */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.5);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,0.6);
+  --shadow-glow-brand: 0 8px 24px var(--ph-brand-glow);
+  --shadow-glow-pb: 0 8px 24px var(--ph-pb-glow);
+}
+
+/* ─── Global resets aligned to PH-DLS v2 ─────────────────── */
+body {
+  font-family: var(--font-body);
+  background: linear-gradient(180deg, var(--ph-bg-base) 0%, var(--ph-bg-deep) 100%);
+  color: var(--ph-text);
+  font-feature-settings: 'cv11', 'ss03', 'tnum';
+}
+
+.font-display { font-family: var(--font-display); }
+.font-mono    { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.tabular      { font-variant-numeric: tabular-nums; }
+
+/* ─── PH-DLS v2 STAT CARD ─────────────────────────────────── */
+.ph-stat-card {
+  position: relative;
+  background: var(--ph-bg-elevated);
+  border: 1px solid var(--ph-border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-5);
+  transition: transform 200ms var(--ease-out), border-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out);
+  cursor: pointer;
+  overflow: hidden;
+}
+.ph-stat-card::before {
+  /* inset top edge highlight — premium "lit from above" feel */
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+}
+.ph-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--ph-border-2);
+  box-shadow: var(--shadow-glow-brand);
+}
+.ph-stat-card .icon {
+  width: 40px; height: 40px;
+  border-radius: var(--r-md);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--ph-brand-glow);
+  color: var(--ph-brand);
+  margin-bottom: var(--sp-3);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+  transition: transform 200ms var(--ease-out);
+}
+.ph-stat-card:hover .icon { transform: scale(1.08); }
+.ph-stat-card .label {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--ph-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--sp-1);
+}
+.ph-stat-card .value {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  font-size: 32px;
+  color: var(--ph-text);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.ph-stat-card .delta {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--ph-text-muted);
+  margin-top: var(--sp-1);
+}
+.ph-stat-card.warm .icon  { background: var(--ph-pb-glow);  color: var(--ph-pb); }
+.ph-stat-card.warm:hover  { box-shadow: var(--shadow-glow-pb); }
+.ph-stat-card.warm .value { color: var(--ph-pb); }
+
+/* ─── PH-DLS v2 INSIGHT CARD (halo) ───────────────────────── */
+.ph-insight-card {
+  position: relative;
+  background: var(--ph-bg-elevated);
+  border: 1px solid var(--ph-border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-5);
+  overflow: hidden;
+  transition: transform 200ms var(--ease-out), border-color 200ms var(--ease-out);
+}
+.ph-insight-card .halo {
+  position: absolute;
+  top: -48px; right: -48px;
+  width: 160px; height: 160px;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.7;
+  pointer-events: none;
+}
+.ph-insight-card.success .halo  { background: var(--ph-success-glow); }
+.ph-insight-card.success         { border-color: rgba(16,185,129,0.25); }
+.ph-insight-card.caution .halo  { background: var(--ph-caution-glow); }
+.ph-insight-card.caution         { border-color: rgba(245,158,11,0.25); }
+.ph-insight-card.alert .halo    { background: var(--ph-alert-glow); }
+.ph-insight-card.alert           { border-color: rgba(239,68,68,0.25); }
+.ph-insight-card.info .halo     { background: var(--ph-info-glow); }
+.ph-insight-card.info            { border-color: rgba(139,92,246,0.25); }
+.ph-insight-card:hover { transform: translateY(-2px); }
+.ph-insight-card .icon-box {
+  position: relative;
+  z-index: 1;
+  width: 44px; height: 44px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: var(--sp-4);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.ph-insight-card.success .icon-box { background: rgba(16,185,129,0.15); color: var(--ph-success); }
+.ph-insight-card.caution .icon-box { background: rgba(245,158,11,0.15); color: var(--ph-caution); }
+.ph-insight-card.alert .icon-box   { background: rgba(239,68,68,0.15); color: var(--ph-alert); }
+.ph-insight-card.info .icon-box    { background: rgba(139,92,246,0.15); color: var(--ph-info); }
+.ph-insight-card h3 {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--ph-text);
+  margin-bottom: var(--sp-2);
+  letter-spacing: -0.01em;
+}
+.ph-insight-card p {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ph-text-muted);
+}
+
+/* ─── PH-DLS v2 TIER BADGE ────────────────────────────────── */
+.ph-tier {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+}
+.ph-tier.block    { background: rgba(100,116,139,0.15); color: #94a3b8; }
+.ph-tier.district { background: rgba(6,182,212,0.15);   color: #06b6d4; }
+.ph-tier.state    { background: rgba(245,158,11,0.15);  color: #f59e0b; }
+.ph-tier.national { background: rgba(139,92,246,0.15);  color: #a78bfa; }
+.ph-tier.elite    { background: linear-gradient(90deg, #f59e0b, #fbbf24); color: #1a0f00; }
+
+/* ─── PH-DLS v2 ATHLETE AVATAR ────────────────────────────── */
+.ph-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--ph-brand-glow);
+  border: 1px solid rgba(255,255,255,0.12);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ph-brand);
+}
+
+/* ─── Status dot for color-coded form scores ──────────────── */
+.ph-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+.ph-dot.success { background: var(--ph-success); box-shadow: 0 0 6px var(--ph-success-glow); }
+.ph-dot.caution { background: var(--ph-caution); box-shadow: 0 0 6px var(--ph-caution-glow); }
+.ph-dot.alert   { background: var(--ph-alert); box-shadow: 0 0 6px var(--ph-alert-glow); }
+
+/* ─── LIVE pulse dot ──────────────────────────────────────── */
+.ph-live-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--ph-success);
+  box-shadow: 0 0 6px var(--ph-success-glow);
+  animation: ph-pulse 2s ease-in-out infinite;
+}
+@keyframes ph-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.5; transform: scale(0.9); }
+}
+
+/* ─── Glass header (real-time data card) ──────────────────── */
+.ph-glass {
+  background: rgba(10, 10, 12, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--ph-border);
+  border-radius: var(--r-lg);
+}
+
+/* ─── Stagger entrance animation ──────────────────────────── */
+@keyframes ph-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ph-stagger {
+  animation: ph-fade-up 400ms var(--ease-out) both;
+}
+.ph-stagger-1 { animation-delay: 0ms; }
+.ph-stagger-2 { animation-delay: 75ms; }
+.ph-stagger-3 { animation-delay: 150ms; }
+.ph-stagger-4 { animation-delay: 225ms; }
+.ph-stagger-5 { animation-delay: 300ms; }
+.ph-stagger-6 { animation-delay: 375ms; }
+
+/* Reduced motion respect */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
