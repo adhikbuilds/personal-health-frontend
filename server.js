@@ -113,11 +113,21 @@ app.get('/dashboard', async (req, res) => {
     });
 });
 
-// Eklavya GPS Map
+// GPS Map
 app.get('/map', async (req, res) => {
     const health = await fetchBackendData('/health', { status: 'offline' });
 
     res.render('map', {
+        config: buildConfig(),
+        backendOnline: health?.status === 'ok',
+    });
+});
+
+// Wellness Dashboard (Sprint W&N-01 — Dev 5)
+app.get('/wellness', async (req, res) => {
+    const health = await fetchBackendData('/health', { status: 'offline' });
+
+    res.render('wellness', {
         config: buildConfig(),
         backendOnline: health?.status === 'ok',
     });
@@ -161,7 +171,7 @@ app.use('/api', createProxyMiddleware({
 // ── Phone App Transparent Proxy ──────────────────────────────────────────────
 // Android app hits http://PC_IP:8083/session/start, /rppg/frame etc.
 // Skip known page/static routes, proxy everything else straight to FastAPI.
-const PAGE_ROUTES = ['/', '/dashboard', '/map', '/public', '/config.js', '/api'];
+const PAGE_ROUTES = ['/', '/dashboard', '/map', '/wellness', '/public', '/config.js', '/api'];
 
 app.use('/', createProxyMiddleware({
     target: FASTAPI_URL,

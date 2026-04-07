@@ -21,18 +21,17 @@
     </div>
     <div class="nav-links">
       <a href="/dashboard" class="nav-link">Dashboard</a>
+      <a href="/wellness" class="nav-link">Wellness</a>
       <a href="/map" class="nav-link">Map</a>
-      <a href="/api/status" target="_blank" class="nav-link">API</a>
     </div>
     <div class="nav-right">
       <span class="status-dot <%= backendOnline ? 'online' : 'offline' %>"></span>
-      <span class="status-text"><%= backendOnline ? 'Backend online' : 'Offline' %></span>
-      <a href="/dashboard" class="btn-nav">Open Dashboard →</a>
+      <span class="status-text"><%= backendOnline ? 'Online' : 'Offline' %></span>
+      <a href="/dashboard" class="btn-nav">Open Dashboard</a>
     </div>
   </nav>
 
   <main>
-    <!-- Hero -->
     <section class="hero">
       <h1>Sports Biomechanics<br><span class="accent">AI Platform</span></h1>
       <p class="hero-sub">Real-time pose analysis, heart rate monitoring, and session tracking — powered by your phone's camera</p>
@@ -57,26 +56,30 @@
       </div>
     </section>
 
-    <!-- What it does -->
     <section class="features">
       <div class="feature-card">
-        <div class="feature-icon">📐</div>
+        <div class="feature-icon-box">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        </div>
         <h3>Biomechanics Analysis</h3>
-        <p>Real-time joint angle tracking and form scoring from the phone camera using MediaPipe pose estimation. Tracks knee, hip, spine, and ankle angles per frame.</p>
+        <p>Real-time joint angle tracking and form scoring using MediaPipe pose estimation. Tracks knee, hip, spine, and ankle angles per frame.</p>
       </div>
       <div class="feature-card">
-        <div class="feature-icon">❤️</div>
+        <div class="feature-icon-box">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
         <h3>Heart Rate Monitor</h3>
         <p>Remote photoplethysmography (rPPG) via front camera. Measures BPM and HRV by detecting subtle skin colour changes — no wearable needed.</p>
       </div>
       <div class="feature-card">
-        <div class="feature-icon">📊</div>
+        <div class="feature-icon-box">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+        </div>
         <h3>Session Tracking</h3>
         <p>Every workout session is recorded with frame-level data. Form scores, peak jump height, symmetry index, and XP earned are stored per athlete.</p>
       </div>
     </section>
 
-    <!-- Top Athletes — server-rendered from /leaderboard -->
     <% if (topAthletes && topAthletes.length > 0) { %>
     <section class="leaderboard">
       <h2>Top Athletes</h2>
@@ -93,31 +96,9 @@
         </div>
         <% }); %>
       </div>
-      <a href="/dashboard" class="see-all">Full leaderboard in Dashboard →</a>
+      <a href="/dashboard" class="see-all">Full leaderboard in Dashboard</a>
     </section>
     <% } %>
-
-    <!-- System -->
-    <section class="system">
-      <h2>System</h2>
-      <div class="system-grid">
-        <div class="sys-card">
-          <div class="sys-label">Android App</div>
-          <div class="sys-desc">React Native · Expo SDK 54 · expo-camera</div>
-          <div class="sys-tag">Scan QR in Expo Go</div>
-        </div>
-        <div class="sys-card active">
-          <div class="sys-label">Web Frontend</div>
-          <div class="sys-desc">Node.js · Express · EJS</div>
-          <div class="sys-tag">You are here</div>
-        </div>
-        <div class="sys-card">
-          <div class="sys-label">Backend API</div>
-          <div class="sys-desc">FastAPI · MediaPipe · WebSocket</div>
-          <a href="<%= config.API_BASE %>/health" target="_blank" class="sys-link">Health check →</a>
-        </div>
-      </div>
-    </section>
   </main>
 
 </body>
