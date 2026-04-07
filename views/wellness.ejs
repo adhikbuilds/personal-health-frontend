@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Personal Health — Wellness</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/public/css/tokens.css">
   <link rel="stylesheet" href="/public/css/wellness.css">
   <script src="/config.js"></script>
 </head>
@@ -36,29 +37,76 @@
       <a href="/dashboard" class="btn">Back to Dashboard</a>
     </div>
 
-    <div class="coming-soon-card">
-      <div class="coming-soon-icon">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="1.5" stroke-linecap="round">
-          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-        </svg>
-      </div>
-      <h2>Wellness Dashboard</h2>
-      <p>Coming soon — the team is building nutrition tracking, sleep analysis, and recovery scoring.</p>
-      <div class="feature-list">
-        <div class="feature-item">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-          <span>Meal logging with Indian food database</span>
+    <!-- PH-V2-F-07: 2x2 preview tiles instead of single coming-soon -->
+    <div class="wellness-preview-grid">
+      <div class="preview-tile ph-stagger ph-stagger-1">
+        <div class="preview-pill">Coming Soon</div>
+        <div class="preview-icon-box">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.4 14.2l-3.4-3.4-3 3-4-4"/></svg>
         </div>
-        <div class="feature-item">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2"><path d="M23 6l-9.5 9.5-5-5L1 18"/></svg>
-          <span>Sleep quality tracking and trends</span>
-        </div>
-        <div class="feature-item">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-          <span>Recovery readiness before every session</span>
+        <h3>Nutrition Tracking</h3>
+        <p>Log meals from a 200+ Indian food database with calorie and macro tracking.</p>
+        <div class="preview-mock">
+          <div class="mock-row"><span>Poha</span><span class="tabular">270 cal</span></div>
+          <div class="mock-row"><span>Dal Rice</span><span class="tabular">420 cal</span></div>
+          <div class="mock-row"><span>Paneer Tikka</span><span class="tabular">280 cal</span></div>
         </div>
       </div>
-      <a href="/dashboard" class="back-link">View Dashboard</a>
+
+      <div class="preview-tile ph-stagger ph-stagger-2">
+        <div class="preview-pill">Coming Soon</div>
+        <div class="preview-icon-box">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </div>
+        <h3>Sleep Quality</h3>
+        <p>Track bedtime, duration, and sleep score with weekly trends.</p>
+        <div class="preview-mock">
+          <div class="sleep-bars">
+            <div class="bar" style="height: 60%"></div>
+            <div class="bar" style="height: 80%"></div>
+            <div class="bar" style="height: 70%"></div>
+            <div class="bar" style="height: 90%"></div>
+            <div class="bar" style="height: 50%"></div>
+            <div class="bar" style="height: 75%"></div>
+            <div class="bar" style="height: 85%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="preview-tile ph-stagger ph-stagger-3">
+        <div class="preview-pill">Coming Soon</div>
+        <div class="preview-icon-box">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <h3>Recovery Score</h3>
+        <p>Pre-session readiness based on sleep, soreness, and stress.</p>
+        <div class="preview-mock">
+          <div class="recovery-ring">
+            <div class="ring-bg"></div>
+            <div class="ring-value tabular">74</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="preview-tile ph-stagger ph-stagger-4">
+        <div class="preview-pill">Coming Soon</div>
+        <div class="preview-icon-box">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        </div>
+        <h3>Hydration</h3>
+        <p>Daily water intake tracking with reminders.</p>
+        <div class="preview-mock">
+          <div class="hydration-bar">
+            <div class="hydration-fill" style="width: 65%"></div>
+          </div>
+          <div class="mock-row"><span>2.6L of 4L</span><span class="tabular">65%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wellness-cta">
+      <button class="btn">Notify me when wellness ships</button>
+      <p style="margin-top: 12px; font-size: 12px; color: var(--ph-text-muted);">Built by the team — shipping after the next sprint.</p>
     </div>
   </main>
 

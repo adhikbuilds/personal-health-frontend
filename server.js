@@ -89,17 +89,29 @@ app.get('/config.js', (req, res) => {
 
 // Landing Page — fetches live stats before rendering
 app.get('/', async (req, res) => {
-    const [health, leaderboard] = await Promise.all([
-        fetchBackendData('/health',     { status: 'offline', athlete_count: 0, active_sessions: 0 }),
-        fetchBackendData('/leaderboard', { athletes: [] }),
+    const [health, leaderboard, modelStats, recentSessions, activeSessions] = await Promise.all([
+        fetchBackendData('/health',     { status: 'offline' }),
+        fetchBackendData('/leaderboard', { leaderboard: [] }),
+        fetchBackendData('/model/stats', null),
+        fetchBackendData('/sessions?limit=20&status=completed', { sessions: [] }),
+        fetchBackendData('/sessions/active', { count: 0 }),
     ]);
+
+    // Compute avg form score from recent sessions
+    const sessions = recentSessions?.sessions || [];
+    const scores = sessions.map(s => s.summary?.avg_form_score).filter(s => s != null);
+    const avgFormScore = scores.length > 0
+        ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)
+        : null;
 
     res.render('index', {
         config: buildConfig(),
         backendOnline: health?.status === 'ok',
-        athleteCount:  health?.athlete_count  ?? 0,
-        activeSessions: health?.active_sessions ?? 0,
-        topAthletes:   Array.isArray(leaderboard?.athletes) ? leaderboard.athletes.slice(0, 5) : [],
+        athleteCount:  health?.athletes_count  ?? 0,
+        sessionsTotal: health?.sessions_count  ?? 0,
+        activeSessions: activeSessions?.count ?? 0,
+        avgFormScore: avgFormScore,
+        topAthletes: Array.isArray(leaderboard?.leaderboard) ? leaderboard.leaderboard.slice(0, 5) : [],
     });
 });
 
