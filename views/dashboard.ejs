@@ -90,11 +90,14 @@
           </div>
         </div>
 
-        <!-- Live Session Panel — auto-connects when phone starts a session -->
-        <div class="card" id="live-card" style="display:none">
+        <!-- PH-V2-F-05: Live Session Panel — glass morphism + LIVE pulse dot -->
+        <div class="card ph-glass" id="live-card" style="display:none">
           <div class="card-header">
-            <span class="card-title">Live Metrics</span>
-            <span class="badge badge-live">Live</span>
+            <span class="card-title font-display" style="display:flex;align-items:center;gap:8px;">
+              <span class="ph-live-dot"></span>
+              LIVE METRICS
+            </span>
+            <span class="badge badge-live">Streaming</span>
           </div>
           <div id="live-data">
             <div class="metric-grid">
@@ -149,10 +152,14 @@
       <!-- Right Column -->
       <div class="col-right">
 
-        <!-- Leaderboard -->
+        <!-- Leaderboard with PH-V2-F-06 triage toggle -->
         <div class="card">
           <div class="card-header">
-            <span class="card-title">Leaderboard</span>
+            <span class="card-title font-display">LEADERBOARD</span>
+            <div class="ph-toggle">
+              <button class="ph-toggle-btn active" id="lb-mode-bpi" onclick="setLBMode('bpi')">By BPI</button>
+              <button class="ph-toggle-btn" id="lb-mode-triage" onclick="setLBMode('triage')">Needs Attention</button>
+            </div>
           </div>
           <div id="leaderboard-list">
             <div class="empty-state">Loading...</div>
@@ -307,24 +314,62 @@
       activeWS.onerror = () => {};
     }
 
-    // ── Leaderboard ───────────────────────────────────────────────────────────
+    // ── Leaderboard with PH-V2-F-06 triage mode ────────────────────────────────
+    let lbMode = 'bpi';        // 'bpi' | 'triage'
+    let _athletesCache = [];   // cached list to support fast mode toggle
+
+    function setLBMode(mode) {
+      lbMode = mode;
+      document.getElementById('lb-mode-bpi').classList.toggle('active', mode === 'bpi');
+      document.getElementById('lb-mode-triage').classList.toggle('active', mode === 'triage');
+      renderLeaderboard();
+    }
+
     async function loadLeaderboard() {
       const data = await get('/leaderboard');
-      const rows = data?.leaderboard || [];
+      _athletesCache = data?.leaderboard || [];
+      renderLeaderboard();
+    }
+
+    function renderLeaderboard() {
       const list = document.getElementById('leaderboard-list');
+      const rows = [..._athletesCache];
       if (!rows.length) {
         list.innerHTML = '<div class="empty-state">No athletes registered yet</div>';
         return;
       }
+
+      // Triage mode: sort by "needs attention" — fewer sessions, lower BPI = needs attention
+      // Until backend exposes injury flags per athlete, we approximate:
+      //   priority = (no recent activity OR low session count) * 1000 + (max_bpi - bpi)
+      // The lower an athlete's bpi vs the leader, the higher their attention need.
+      if (lbMode === 'triage') {
+        const maxBpi = Math.max(...rows.map(a => a.bpi || 0), 1);
+        rows.sort((a, b) => {
+          const aSessionPenalty = (a.sessions ?? 0) < 5 ? 1000 : 0;
+          const bSessionPenalty = (b.sessions ?? 0) < 5 ? 1000 : 0;
+          const aScore = aSessionPenalty + (maxBpi - (a.bpi || 0));
+          const bScore = bSessionPenalty + (maxBpi - (b.bpi || 0));
+          return bScore - aScore;
+        });
+      }
+
       list.innerHTML = rows.slice(0, 10).map((a, i) => {
         const tierClass = (a.tier || 'block').toLowerCase();
+        const showRank = lbMode === 'bpi';
+        // In triage mode, show a status dot instead of rank number
+        const sessionsLow = (a.sessions ?? 0) < 5;
+        const triageDot = sessionsLow ? 'alert' : 'caution';
+        const rankCell = showRank
+          ? `<span class="lb-rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${a.rank ?? i+1}</span>`
+          : `<span class="ph-dot ${triageDot}" style="margin:0 12px 0 4px;width:10px;height:10px;"></span>`;
         return `
         <div class="lb-row" style="cursor:pointer;" onclick="openAthletePanel('${(a.id||'').replace(/'/g,"\\'")}','${(a.name||'').replace(/'/g,"\\'")}')">
-          <span class="lb-rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${a.rank ?? i+1}</span>
+          ${rankCell}
           <span class="ph-avatar">${(a.avatar || a.name || '?')[0].toUpperCase()}</span>
           <div class="lb-info">
             <div class="lb-name">${a.name || a.id || 'Unknown'}</div>
-            <div class="lb-meta">${a.sport || '—'} · <span class="ph-tier ${tierClass}">${a.tier || 'Athlete'}</span></div>
+            <div class="lb-meta">${a.sport || '—'} · <span class="ph-tier ${tierClass}">${a.tier || 'Athlete'}</span> · ${a.sessions ?? 0} sessions</div>
           </div>
           <span class="lb-score tabular">${a.bpi != null ? a.bpi.toLocaleString() : '—'}</span>
         </div>`;
