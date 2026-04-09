@@ -194,11 +194,19 @@
     const API_BASE = window.AB_CONFIG?.API_BASE || '/api';
     const WS_BASE  = `ws://${window.location.hostname}:${window.AB_CONFIG?.PROXY_PORT || 8083}/ws`;
 
+    // XSS prevention — escape all backend data before injecting into innerHTML
+    const _escEl = document.createElement('div');
+    function esc(s) {
+      _escEl.textContent = s == null ? '' : String(s);
+      return _escEl.innerHTML;
+    }
+
     let sessionId = null;
     let ws = null;
     let sport = 'vertical_jump';
     let lbFilter = 'all';
     let liveChart = null;
+    let panelChart = null;
     const liveScoreHistory = [];
 
     function initLiveChart() {
@@ -267,10 +275,10 @@
       }
       panel.innerHTML = sessions.map(s => `
         <div class="lb-row">
-          <span class="lb-avatar">${(s.athlete_id||'?')[0].toUpperCase()}</span>
+          <span class="lb-avatar">${esc((s.athlete_id||'?')[0]).toUpperCase()}</span>
           <div class="lb-info">
-            <div class="lb-name">${s.athlete_id || 'Unknown'}</div>
-            <div class="lb-meta">${s.sport || '—'} · ${s.frame_count ?? 0} frames</div>
+            <div class="lb-name">${esc(s.athlete_id || 'Unknown')}</div>
+            <div class="lb-meta">${esc(s.sport || '—')} · ${s.frame_count ?? 0} frames</div>
           </div>
           <span class="lb-score">${s.latest_score != null ? s.latest_score.toFixed(1) : '—'}</span>
         </div>`).join('');
@@ -303,12 +311,12 @@
         return;
       }
       list.innerHTML = rows.slice(0, 8).map((a, i) => `
-        <div class="lb-row" style="cursor:pointer;" onclick="openAthletePanel('${(a.id||a.athlete_id||'').replace(/'/g,"\\'")}','${(a.name||a.id||'').replace(/'/g,"\\'")}')">
+        <div class="lb-row" style="cursor:pointer;" onclick="openAthletePanel('${esc((a.id||a.athlete_id||'').replace(/'/g,"\\'"))}','${esc((a.name||a.id||'').replace(/'/g,"\\'"))}')">
           <span class="lb-rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${a.rank ?? i+1}</span>
-          <span class="lb-avatar">${(a.avatar || a.name || a.id || '?')[0].toUpperCase()}</span>
+          <span class="lb-avatar">${esc((a.avatar || a.name || a.id || '?')[0]).toUpperCase()}</span>
           <div class="lb-info">
-            <div class="lb-name">${a.name || a.id || 'Unknown'}</div>
-            <div class="lb-meta">${a.sport || '—'} · ${a.tier || 'Athlete'}</div>
+            <div class="lb-name">${esc(a.name || a.id || 'Unknown')}</div>
+            <div class="lb-meta">${esc(a.sport || '—')} · ${esc(a.tier || 'Athlete')}</div>
           </div>
           <span class="lb-score">${a.bpi != null ? a.bpi.toLocaleString() : '—'}</span>
         </div>`).join('');
@@ -326,11 +334,11 @@
       }
       document.getElementById('athlete-count').textContent = `${data.total} registered`;
       list.innerHTML = athletes.slice(0, 6).map(a => `
-        <div class="athlete-row" style="cursor:pointer;" onclick="openAthletePanel('${(a.id||a.athlete_id||'').replace(/'/g,"\\'")}','${(a.name||a.id||'').replace(/'/g,"\\'")}')">
-          <span class="lb-avatar">${(a.avatar || a.name || a.id || '?')[0].toUpperCase()}</span>
+        <div class="athlete-row" style="cursor:pointer;" onclick="openAthletePanel('${esc((a.id||a.athlete_id||'').replace(/'/g,"\\'"))}','${esc((a.name||a.id||'').replace(/'/g,"\\'"))}')">
+          <span class="lb-avatar">${esc((a.avatar || a.name || a.id || '?')[0]).toUpperCase()}</span>
           <div class="lb-info">
-            <div class="lb-name">${a.name || a.id}</div>
-            <div class="lb-meta">${a.sport || '—'} · ${a.tier || 'Athlete'}</div>
+            <div class="lb-name">${esc(a.name || a.id)}</div>
+            <div class="lb-meta">${esc(a.sport || '—')} · ${esc(a.tier || 'Athlete')}</div>
           </div>
           <span class="muted small">${a.sessions != null ? a.sessions + ' sessions' : ''}</span>
         </div>`).join('');
@@ -351,9 +359,9 @@
           <tbody>${sessions.map(s => {
             const score = s.summary?.avg_form_score ?? null;
             return `<tr>
-              <td class="mono small">${(s.session_id||'').slice(0,10)}…</td>
-              <td>${s.athlete_id || '—'}</td>
-              <td>${s.sport || '—'}</td>
+              <td class="mono small">${esc((s.session_id||'').slice(0,10))}…</td>
+              <td>${esc(s.athlete_id || '—')}</td>
+              <td>${esc(s.sport || '—')}</td>
               <td>${s.frame_count ?? '—'}</td>
               <td>${score != null ? score.toFixed(1) : '—'}</td>
             </tr>`;
@@ -406,19 +414,21 @@
       if (!sessionId) return;
       ws = new WebSocket(`${WS_BASE}/metrics/live/${sessionId}`);
       ws.onmessage = (e) => {
-        const d = JSON.parse(e.data);
-        if (d.form_score != null) updateLiveChart(d.form_score);
-        set('m-form',   d.form_score?.toFixed(1));
-        set('m-knee-l', d.knee_angle_l?.toFixed(1));
-        set('m-knee-r', d.knee_angle_r?.toFixed(1));
-        set('m-hip-l',  d.hip_angle_l?.toFixed(1));
-        set('m-hip-r',  d.hip_angle_r?.toFixed(1));
-        set('m-spine',  d.spine_lean?.toFixed(1));
-        if (d.primary_feedback) {
-          const fb = document.getElementById('feedback-bar');
-          fb.textContent = d.primary_feedback;
-          fb.style.display = 'block';
-        }
+        try {
+          const d = JSON.parse(e.data);
+          if (d.form_score != null) updateLiveChart(d.form_score);
+          set('m-form',   d.form_score?.toFixed(1));
+          set('m-knee-l', d.knee_angle_l?.toFixed(1));
+          set('m-knee-r', d.knee_angle_r?.toFixed(1));
+          set('m-hip-l',  d.hip_angle_l?.toFixed(1));
+          set('m-hip-r',  d.hip_angle_r?.toFixed(1));
+          set('m-spine',  d.spine_lean?.toFixed(1));
+          if (d.primary_feedback) {
+            const fb = document.getElementById('feedback-bar');
+            fb.textContent = d.primary_feedback;
+            fb.style.display = 'block';
+          }
+        } catch (err) { console.warn('[WS] Bad message:', err); }
       };
       ws.onerror = () => {}; // silent
     }
@@ -443,8 +453,8 @@
       const impColor = imp >= 0 ? '#22c55e' : '#ef4444';
       const jointRows = Object.entries(data.joint_averages || {}).map(([k, v]) =>
         `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:12px;">
-          <span style="color:#94a3b8;">${k.replace(/_/g,' ')}</span>
-          <span style="color:#f1f5f9;font-weight:700;">${v}°</span>
+          <span style="color:#94a3b8;">${esc(k.replace(/_/g,' '))}</span>
+          <span style="color:#f1f5f9;font-weight:700;">${esc(v)}°</span>
         </div>`
       ).join('');
       document.getElementById('panel-content').innerHTML = `
@@ -466,8 +476,9 @@
         ${jointRows || '<div style="color:#64748b;font-size:12px;">No joint data yet</div>'}
       `;
       if (trend.length > 1 && typeof Chart !== 'undefined') {
+        if (panelChart) { panelChart.destroy(); panelChart = null; }
         const ctx = document.getElementById('panel-trend-chart').getContext('2d');
-        new Chart(ctx, {
+        panelChart = new Chart(ctx, {
           type: 'line',
           data: { labels: trend.map(t => t.date), datasets: [{ data: trend.map(t => t.avg_form_score), borderColor: '#06b6d4', borderWidth: 2, pointRadius: 0, tension: 0.4, fill: false }] },
           options: { animation: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false, min: 0, max: 100 } }, responsive: true, maintainAspectRatio: false }
