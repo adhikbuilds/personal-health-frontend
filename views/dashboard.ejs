@@ -437,50 +437,103 @@
       document.getElementById(id).textContent = val ?? '—';
     }
 
-    // ── Progress Panel ──────────────────────────────────────────────────────────
+    // ── Progress Panel (with injury risk, readiness, weak joints, training plan) ─
     async function openAthletePanel(athleteId, name) {
       document.getElementById('panel-athlete-name').textContent = name || athleteId;
       document.getElementById('panel-content').innerHTML = '<div class="empty-state">Loading...</div>';
       document.getElementById('progress-panel').style.right = '0';
       document.getElementById('panel-overlay').style.display = 'block';
-      const data = await get(`/athlete/${athleteId}/progress`);
-      if (!data) {
+
+      // Fetch all analytics in parallel
+      const [progress, risk, readiness, weakJoints, plan] = await Promise.all([
+        get(`/progress/${athleteId}?days=30`),
+        get(`/injury-risk/${athleteId}?days=14`),
+        get(`/readiness/${athleteId}?days=14`),
+        get(`/weak-joints/${athleteId}?days=30`),
+        get(`/training-plan/${athleteId}?days=14`),
+      ]);
+
+      if (!progress) {
         document.getElementById('panel-content').innerHTML = '<div class="empty-state">Could not load progress</div>';
         return;
       }
-      const trend = data.form_trend || [];
-      const imp = data.improvement_pct ?? 0;
-      const impColor = imp >= 0 ? '#22c55e' : '#ef4444';
-      const jointRows = Object.entries(data.joint_averages || {}).map(([k, v]) =>
+
+      const trend = progress.form_score_trend || [];
+      const formTrendPct = progress.form_trend_pct ?? 0;
+      const formColor = formTrendPct >= 0 ? '#22c55e' : '#ef4444';
+
+      // Readiness badge
+      const rScore = readiness?.score ?? 0;
+      const rBand = esc(readiness?.band || 'unknown');
+      const bandColors = { peak: '#22c55e', ready: '#06b6d4', training: '#f59e0b', recover: '#ef4444' };
+      const rColor = bandColors[readiness?.band] || '#64748b';
+
+      // Injury risk
+      const riskBand = esc(risk?.risk || 'unknown');
+      const riskColors = { low: '#22c55e', watch: '#f59e0b', high: '#ef4444', unknown: '#64748b' };
+      const riskColor = riskColors[risk?.risk] || '#64748b';
+
+      // Weak joints
+      const weakRows = (weakJoints?.weak_joints || []).slice(0, 5).map(j =>
         `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:12px;">
-          <span style="color:#94a3b8;">${esc(k.replace(/_/g,' '))}</span>
-          <span style="color:#f1f5f9;font-weight:700;">${esc(v)}°</span>
+          <span style="color:#94a3b8;">${esc(j.joint.replace(/_/g,' '))}</span>
+          <span style="color:${j.deviation_deg > 10 ? '#ef4444' : j.deviation_deg > 5 ? '#f59e0b' : '#22c55e'};font-weight:700;">${j.deviation_deg.toFixed(1)}° off</span>
         </div>`
       ).join('');
+
+      // Training plan phase
+      const phase = esc(plan?.phase || '');
+      const phaseColors = { build: '#22c55e', maintain: '#06b6d4', overreach: '#f59e0b', recover: '#ef4444' };
+      const phaseColor = phaseColors[plan?.phase] || '#64748b';
+      const drillRows = (plan?.drills || []).map(d =>
+        `<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:12px;">
+          <div style="color:#f1f5f9;font-weight:700;">${esc(d.name)} <span style="color:#64748b;font-weight:400;">${esc(d.sets)}</span></div>
+          <div style="color:#94a3b8;font-size:11px;margin-top:2px;">${esc(d.note)}${d.reason ? ' — ' + esc(d.reason) : ''}</div>
+        </div>`
+      ).join('');
+
       document.getElementById('panel-content').innerHTML = `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
           <div style="background:rgba(255,255,255,0.04);border-radius:12px;padding:14px;">
-            <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Improvement</div>
-            <div style="font-size:22px;font-weight:900;color:${impColor};">${imp > 0 ? '+' : ''}${imp}%</div>
+            <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Readiness</div>
+            <div style="font-size:22px;font-weight:900;color:${rColor};">${rScore}<span style="font-size:12px;color:#64748b;font-weight:400;">/100</span></div>
+            <div style="font-size:10px;color:${rColor};text-transform:uppercase;margin-top:2px;">${rBand}</div>
           </div>
           <div style="background:rgba(255,255,255,0.04);border-radius:12px;padding:14px;">
-            <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">This Week</div>
-            <div style="font-size:22px;font-weight:900;color:#06b6d4;">${data.sessions_this_week ?? 0}</div>
+            <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Injury Risk</div>
+            <div style="font-size:22px;font-weight:900;color:${riskColor};">${riskBand}</div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:2px;">${esc(risk?.reason?.slice(0, 50) || '')}</div>
           </div>
         </div>
-        <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Form Trend (${trend.length} sessions)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+          <div style="background:rgba(255,255,255,0.04);border-radius:12px;padding:14px;">
+            <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Form Trend</div>
+            <div style="font-size:22px;font-weight:900;color:${formColor};">${formTrendPct > 0 ? '+' : ''}${formTrendPct}%</div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:2px;">avg ${progress.avg_form_score}</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.04);border-radius:12px;padding:14px;">
+            <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Training Phase</div>
+            <div style="font-size:22px;font-weight:900;color:${phaseColor};">${phase || '—'}</div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:2px;">${progress.session_count} sessions</div>
+          </div>
+        </div>
+        <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Form Score (${trend.length} days)</div>
         <div style="height:60px;margin-bottom:16px;">
           <canvas id="panel-trend-chart" height="60" style="width:100%;"></canvas>
         </div>
-        <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Joint Averages</div>
-        ${jointRows || '<div style="color:#64748b;font-size:12px;">No joint data yet</div>'}
+        <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Weak Joints</div>
+        ${weakRows || '<div style="color:#64748b;font-size:12px;">No joint data yet</div>'}
+        ${drillRows ? `
+          <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:16px 0 6px;">Recommended Drills</div>
+          ${drillRows}
+        ` : ''}
       `;
       if (trend.length > 1 && typeof Chart !== 'undefined') {
         if (panelChart) { panelChart.destroy(); panelChart = null; }
         const ctx = document.getElementById('panel-trend-chart').getContext('2d');
         panelChart = new Chart(ctx, {
           type: 'line',
-          data: { labels: trend.map(t => t.date), datasets: [{ data: trend.map(t => t.avg_form_score), borderColor: '#06b6d4', borderWidth: 2, pointRadius: 0, tension: 0.4, fill: false }] },
+          data: { labels: trend.map(t => t.date), datasets: [{ data: trend.map(t => t.score), borderColor: '#06b6d4', borderWidth: 2, pointRadius: 0, tension: 0.4, fill: false }] },
           options: { animation: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false, min: 0, max: 100 } }, responsive: true, maintainAspectRatio: false }
         });
       }
