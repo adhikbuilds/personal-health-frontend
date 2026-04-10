@@ -20,10 +20,10 @@
       <span class="logo-name">Personal Health</span>
     </div>
     <div class="nav-links">
-      <a href="/" class="nav-link active">Home</a>
-      <a href="/dashboard" class="nav-link">Dashboard</a>
-      <a href="/wellness" class="nav-link">Wellness</a>
-      <a href="/map" class="nav-link">Map</a>
+      <a href="/" class="nav-link <%= currentRoute === '/' ? 'active' : '' %>">Home</a>
+      <a href="/dashboard" class="nav-link <%= currentRoute === '/dashboard' ? 'active' : '' %>">Dashboard</a>
+      <a href="/wellness" class="nav-link <%= currentRoute === '/wellness' ? 'active' : '' %>">Wellness</a>
+      <a href="/map" class="nav-link <%= currentRoute === '/map' ? 'active' : '' %>">Map</a>
     </div>
     <div class="nav-right">
       <span class="status-dot <%= backendOnline ? 'online' : 'offline' %>"></span>
