@@ -40,16 +40,17 @@
     <!-- Wellness Trends Chart -->
     <div class="wellness-chart-section ph-stagger ph-stagger-1">
       <p class="chart-title">Team Wellness Trends</p>
-      <p class="chart-sub">4-week team average — wellness &amp; sleep scores</p>
-      <canvas id="wellnessChart" height="80"></canvas>
+<p class="chart-sub">4-week team average — wellness &amp; sleep scores</p>
+      <% if (!isRealData) { %>
+        <p class="chart-sample-notice">Sample data — backend endpoint not yet available</p>
+      <% } %>      <canvas id="wellnessChart" height="80"></canvas>
     </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-    <script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js" integrity="sha512-ZCHVpoz7qs0pBDFgxEu2F0RLf/azmqK0RNv63b2oUP8rBKwJJIBaHqRlZkwFm8mI/NK3HmKPbq3zocyS1Wrmg==" crossorigin="anonymous"></script>    <script>
       (function () {
-        var labels       = <%- JSON.stringify(wellnessLabels  || ['Week 1','Week 2','Week 3','Week 4']) %>;
-        var wellnessData = <%- JSON.stringify(wellnessScores  || [65, 72, 68, 75]) %>;
-        var sleepData    = <%- JSON.stringify(sleepScores     || [60, 66, 70, 73]) %>;
+var labels       = <%- JSON.stringify(wellnessLabels) %>;
+        var wellnessData = <%- JSON.stringify(wellnessScores) %>;
+        var sleepData    = <%- JSON.stringify(sleepScores) %>;
+        var isRealData   = <%= isRealData %>;
 
         new Chart(document.getElementById('wellnessChart'), {
           type: 'line',
