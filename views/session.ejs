@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Session Detail — Personal Health</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/public/css/dashboard.css">
+  <script src="/config.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <style>
+    .session-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
+    .session-id { font-family: 'SF Mono', monospace; font-size: 12px; color: #64748b; margin-top: 4px; }
+    .highlight-card { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 16px; border-left: 4px solid; margin-bottom: 10px; }
+    .highlight-card.best_form { border-color: #22c55e; }
+    .highlight-card.worst_form { border-color: #ef4444; }
+    .highlight-card.form_drop { border-color: #f59e0b; }
+    .highlight-card.best_jump { border-color: #8b5cf6; }
+    .highlight-card.asymmetry { border-color: #f59e0b; }
+    .hl-type { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
+    .hl-label { font-size: 14px; font-weight: 700; color: #f1f5f9; margin: 4px 0; }
+    .hl-detail { font-size: 12px; color: #94a3b8; }
+    .phase-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; margin: 2px; }
+    .quality-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin: 8px 0; }
+    .quality-bar > div { height: 100%; }
+    .qb-elite { background: #22c55e; }
+    .qb-good { background: #06b6d4; }
+    .qb-average { background: #f59e0b; }
+    .qb-poor { background: #ef4444; }
+    .share-text { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px; font-size: 13px; color: #94a3b8; cursor: pointer; position: relative; }
+    .share-text:hover { background: rgba(255,255,255,0.06); }
+    .share-text::after { content: 'click to copy'; position: absolute; right: 14px; top: 14px; font-size: 10px; color: #64748b; }
+    .back-link { color: #06b6d4; text-decoration: none; font-size: 13px; }
+    .back-link:hover { text-decoration: underline; }
+    .section-title { font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 10px; }
+    .rep-count { font-size: 48px; font-weight: 900; color: #06b6d4; line-height: 1; }
+    .frame-timeline { max-height: 300px; overflow-y: auto; }
+    .frame-row { display: grid; grid-template-columns: 40px 60px 60px 60px 60px auto; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 11px; align-items: center; }
+    .frame-header { color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">
+      <span class="logo-mark">PH</span>
+      <span class="logo-name">Personal Health</span>
+    </div>
+    <nav class="nav">
+      <a class="nav-item" href="/">Overview</a>
+      <a class="nav-item" href="/dashboard">Dashboard</a>
+      <a class="nav-item" href="/wellness">Wellness</a>
+      <a class="nav-item" href="/map">Map</a>
+    </nav>
+    <div class="sidebar-status">
+      <span class="dot <%= backendOnline ? 'green' : 'red' %>"></span>
+      <span><%= backendOnline ? 'Backend online' : 'Backend offline' %></span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <a href="/dashboard" class="back-link">&larr; Back to Dashboard</a>
+    <div id="session-loading" class="empty-state" style="margin-top:40px;">Loading session...</div>
+    <div id="session-root" style="display:none;">
+      <div class="session-header" id="session-header"></div>
+      <div class="stats-row" id="session-stats"></div>
+
+      <div class="grid">
+        <div class="col-left">
+          <div class="section-title">Highlights</div>
+          <div id="highlights"></div>
+
+          <div class="section-title">Quality Distribution</div>
+          <div id="quality-dist"></div>
+
+          <div class="section-title">Form Score Timeline</div>
+          <div style="height:140px;margin-bottom:16px;"><canvas id="timeline-chart" height="140"></canvas></div>
+
+          <div class="section-title">Phase Transitions</div>
+          <div id="phases"></div>
+        </div>
+
+        <div class="col-right">
+          <div class="section-title">Rep Count</div>
+          <div id="rep-count"></div>
+
+          <div class="section-title">Score Card</div>
+          <div id="scorecard"></div>
+
+          <div class="section-title">Share</div>
+          <div id="share-text"></div>
+
+          <div class="section-title">Frame Data</div>
+          <div class="frame-timeline" id="frame-data"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const API_BASE = window.AB_CONFIG?.API_BASE || '/api';
+    const _e = document.createElement('div');
+    function esc(s) { _e.textContent = s == null ? '' : String(s); return _e.innerHTML; }
+    const sessionId = '<%= sessionId %>';
+
+    async function get(path) {
+      try { const r = await fetch(API_BASE + path); return r.ok ? r.json() : null; } catch { return null; }
+    }
+
+    async function loadSession() {
+      const [replay, highlights, reps, scorecard] = await Promise.all([
+        get(`/sessions/${sessionId}/replay?downsample=2`),
+        get(`/sessions/${sessionId}/highlights`),
+        get(`/sessions/${sessionId}/rep-count`),
+        get(`/sessions/${sessionId}/scorecard`),
+      ]);
+
+      if (!replay) {
+        document.getElementById('session-loading').textContent = 'Session not found or backend offline.';
+        return;
+      }
+
+      document.getElementById('session-loading').style.display = 'none';
+      document.getElementById('session-root').style.display = 'block';
+
+      // Header
+      document.getElementById('session-header').innerHTML = `
+        <div>
+          <h1 style="margin:0;">${esc(replay.sport?.replace(/_/g, ' '))} Session</h1>
+          <div class="session-id">${esc(sessionId)}</div>
+          <div style="color:#94a3b8;font-size:13px;margin-top:4px;">${esc(replay.athlete_id)} · ${esc(replay.started_at?.slice(0, 16).replace('T', ' '))}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:11px;color:#64748b;">Status</div>
+          <div style="font-size:16px;font-weight:700;color:${replay.status === 'completed' ? '#22c55e' : '#f59e0b'}">${esc(replay.status)}</div>
+        </div>
+      `;
+
+      // Stats
+      document.getElementById('session-stats').innerHTML = `
+        <div class="stat-card"><div class="stat-label">Frames</div><div class="stat-value mono">${replay.total_frames}</div></div>
+        <div class="stat-card"><div class="stat-label">Avg Form</div><div class="stat-value mono">${replay.avg_form_score ?? '—'}</div></div>
+        <div class="stat-card"><div class="stat-label">Phases</div><div class="stat-value mono">${replay.phases?.length ?? 0}</div></div>
+        <div class="stat-card"><div class="stat-label">Reps</div><div class="stat-value mono">${reps?.rep_count ?? '—'}</div></div>
+      `;
+
+      // Highlights
+      if (highlights?.highlights?.length) {
+        document.getElementById('highlights').innerHTML = highlights.highlights.map(h => `
+          <div class="highlight-card ${esc(h.type)}">
+            <div class="hl-type">${esc(h.type.replace(/_/g, ' '))}</div>
+            <div class="hl-label">${esc(h.label)}</div>
+            <div class="hl-detail">${h.form_score ? 'Score: ' + h.form_score : ''}${h.jump_height_cm ? h.jump_height_cm + 'cm' : ''}${h.feedback ? ' — ' + esc(h.feedback) : ''}</div>
+          </div>
+        `).join('');
+      } else {
+        document.getElementById('highlights').innerHTML = '<div class="empty-state">No highlights</div>';
+      }
+
+      // Quality distribution
+      if (scorecard?.stats?.quality_distribution) {
+        const qd = scorecard.stats.quality_distribution;
+        const total = Object.values(qd).reduce((a, b) => a + b, 0) || 1;
+        document.getElementById('quality-dist').innerHTML = `
+          <div class="quality-bar">
+            <div class="qb-elite" style="width:${qd.elite / total * 100}%"></div>
+            <div class="qb-good" style="width:${qd.good / total * 100}%"></div>
+            <div class="qb-average" style="width:${qd.average / total * 100}%"></div>
+            <div class="qb-poor" style="width:${qd.poor / total * 100}%"></div>
+          </div>
+          <div style="display:flex;gap:16px;font-size:11px;color:#94a3b8;">
+            <span style="color:#22c55e;">Elite: ${qd.elite}</span>
+            <span style="color:#06b6d4;">Good: ${qd.good}</span>
+            <span style="color:#f59e0b;">Avg: ${qd.average}</span>
+            <span style="color:#ef4444;">Poor: ${qd.poor}</span>
+          </div>
+        `;
+      }
+
+      // Timeline chart
+      const frames = replay.frames || [];
+      const scored = frames.filter(f => f.form_score > 0);
+      if (scored.length > 2) {
+        new Chart(document.getElementById('timeline-chart').getContext('2d'), {
+          type: 'line',
+          data: {
+            labels: scored.map((_, i) => i),
+            datasets: [{ data: scored.map(f => f.form_score), borderColor: '#06b6d4', borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: { target: 'origin', above: 'rgba(6,182,212,0.08)' } }]
+          },
+          options: { animation: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { min: 0, max: 100, ticks: { color: '#64748b' } } }, responsive: true, maintainAspectRatio: false }
+        });
+      }
+
+      // Phases
+      if (replay.phases?.length) {
+        const phaseColors = { setup: '#64748b', descent: '#f59e0b', bottom: '#ef4444', takeoff: '#8b5cf6', flight: '#06b6d4', landing: '#22c55e', unknown: '#475569' };
+        document.getElementById('phases').innerHTML = replay.phases.map(p => `
+          <span class="phase-badge" style="background:${(phaseColors[p.phase] || '#475569')}20;color:${phaseColors[p.phase] || '#475569'};">${esc(p.phase)} (frame ${p.starts_at_frame})</span>
+        `).join('');
+      }
+
+      // Rep count
+      if (reps) {
+        document.getElementById('rep-count').innerHTML = reps.supported
+          ? `<div class="rep-count">${reps.rep_count}</div><div style="font-size:12px;color:#64748b;margin-top:4px;">reps detected via ${esc(reps.joint)}</div>`
+          : `<div style="color:#64748b;font-size:13px;">rep counting not supported for ${esc(reps.sport)}</div>`;
+      }
+
+      // Scorecard
+      if (scorecard) {
+        const pb = scorecard.personal_bests;
+        document.getElementById('scorecard').innerHTML = `
+          <div class="stat-card" style="margin-bottom:8px;">
+            <div class="stat-label">${esc(scorecard.headline_stat.label)}</div>
+            <div class="stat-value mono" style="font-size:28px;">${scorecard.headline_stat.value}${esc(scorecard.headline_stat.unit)}</div>
+          </div>
+          <div style="display:flex;gap:8px;font-size:12px;">
+            <div style="flex:1;padding:8px;background:rgba(255,255,255,0.03);border-radius:8px;">BPI: ${scorecard.bpi.current} <span style="color:#22c55e;">(${esc(scorecard.bpi.delta)})</span></div>
+            <div style="flex:1;padding:8px;background:rgba(255,255,255,0.03);border-radius:8px;">${pb.is_pb_form ? '<span style="color:#f59e0b;">NEW PB</span> Form' : 'PB Form: ' + pb.form_score}</div>
+          </div>
+        `;
+
+        // Share text
+        document.getElementById('share-text').innerHTML = `<div class="share-text" onclick="navigator.clipboard.writeText(this.innerText.replace('click to copy','').trim())">${esc(scorecard.share_text)}</div>`;
+      }
+
+      // Frame data table
+      if (frames.length) {
+        const header = '<div class="frame-row frame-header"><span>#</span><span>Score</span><span>Knee L</span><span>Knee R</span><span>Sym</span><span>Phase</span></div>';
+        const rows = frames.slice(0, 100).map(f => `
+          <div class="frame-row">
+            <span style="color:#475569;">${f.frame_num ?? f.idx}</span>
+            <span style="color:${f.form_score > 75 ? '#22c55e' : f.form_score > 50 ? '#f59e0b' : '#ef4444'};font-weight:700;">${f.form_score || '—'}</span>
+            <span style="color:#94a3b8;">${f.knee_l?.toFixed(0) ?? '—'}</span>
+            <span style="color:#94a3b8;">${f.knee_r?.toFixed(0) ?? '—'}</span>
+            <span style="color:#94a3b8;">${f.symmetry?.toFixed(2) ?? '—'}</span>
+            <span style="color:#64748b;">${esc(f.phase) || '—'}</span>
+          </div>
+        `).join('');
+        document.getElementById('frame-data').innerHTML = header + rows;
+      }
+    }
+
+    window.onload = loadSession;
+  </script>
+</body>
+</html>
