@@ -141,16 +141,27 @@ app.get('/wellness', async (req, res) => {
 
     const wellnessWeekly = await fetchBackendData('/wellness/weekly-summary', null);
 
-    const wellnessLabels  = wellnessWeekly?.labels  || ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
-    const wellnessScores  = wellnessWeekly?.wellness || [65, 72, 68, 75];
-    const sleepScores     = wellnessWeekly?.sleep    || [60, 66, 70, 73];
+    // Sanitize labels — strip any chars that could break out of a script tag
+    const wellnessLabels = (wellnessWeekly?.labels || ['Week 1', 'Week 2', 'Week 3', 'Week 4'])
+        .map(l => String(l).replace(/[<>"'\/\\]/g, ''));
+
+    // Coerce to Number — makes injection through data arrays impossible
+    const wellnessScores = (wellnessWeekly?.wellness || [65, 72, 68, 75])
+        .map(n => Number(n) || 0);
+
+    const sleepScores = (wellnessWeekly?.sleep || [60, 66, 70, 73])
+        .map(n => Number(n) || 0);
+
+    // Flag so the template can show "sample data" warning when backend is offline
+    const isRealData = wellnessWeekly !== null;
 
     res.render('wellness', {
         config: buildConfig(),
-        backendOnline:  health?.status === 'ok',
+        backendOnline: health?.status === 'ok',
         wellnessLabels,
         wellnessScores,
         sleepScores,
+        isRealData,
     });
 });
 
