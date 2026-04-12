@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personal Health — Training Plan</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/public/css/dashboard.css">
+  <link rel="stylesheet" href="/public/css/plan.css">
+  <script src="/config.js"></script>
+</head>
+<body>
+
+  <aside class="sidebar">
+    <div class="logo">
+      <span class="logo-mark">PH</span>
+      <span class="logo-name">Personal Health</span>
+    </div>
+    <nav class="nav">
+      <a class="nav-item" href="/">Overview</a>
+      <a class="nav-item" href="/dashboard">Dashboard</a>
+      <a class="nav-item active" href="/plan">Training Plan</a>
+      <a class="nav-item" href="/huddle">Huddle</a>
+      <a class="nav-item" href="/wellness">Wellness</a>
+      <a class="nav-item" href="/map">Map</a>
+    </nav>
+    <div class="sidebar-status">
+      <span class="dot <%= backendOnline ? 'green' : 'red' %>"></span>
+      <span><%= backendOnline ? 'Backend online' : 'Backend offline' %></span>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <div class="page-header">
+      <div>
+        <h1>Dynamic Training Plan</h1>
+        <p class="sub">Personalized 7-day plan based on recent form, weak joints, and recovery state.</p>
+      </div>
+      <div class="header-actions">
+        <select id="athlete-picker" class="picker"></select>
+        <button id="regen-btn" class="btn">Regenerate</button>
+      </div>
+    </div>
+
+    <!-- Summary strip -->
+    <div class="plan-summary card">
+      <div class="plan-summary-text">
+        <div class="plan-summary-title" id="plan-title">Loading plan…</div>
+        <div class="plan-summary-sub muted" id="plan-sub"></div>
+      </div>
+      <div class="plan-summary-stats">
+        <div class="plan-stat">
+          <div class="plan-stat-label">Week</div>
+          <div class="plan-stat-value mono" id="plan-week">—</div>
+        </div>
+        <div class="plan-stat">
+          <div class="plan-stat-label">Adherence</div>
+          <div class="plan-stat-value mono" id="plan-adh">—</div>
+        </div>
+        <div class="plan-stat">
+          <div class="plan-stat-label">Source</div>
+          <div class="plan-stat-value mono" id="plan-source">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Context chips -->
+    <div class="plan-context" id="plan-context"></div>
+
+    <!-- 7-day calendar -->
+    <div class="plan-week" id="plan-week-grid">
+      <div class="empty-state">Loading…</div>
+    </div>
+
+  </main>
+
+<script>
+(function(){
+  const API = (window.AB_CONFIG && window.AB_CONFIG.API_BASE) || '/api';
+  const picker   = document.getElementById('athlete-picker');
+  const regenBtn = document.getElementById('regen-btn');
+  const grid     = document.getElementById('plan-week-grid');
+  const title    = document.getElementById('plan-title');
+  const sub      = document.getElementById('plan-sub');
+  const wk       = document.getElementById('plan-week');
+  const adh      = document.getElementById('plan-adh');
+  const src      = document.getElementById('plan-source');
+  const ctxEl    = document.getElementById('plan-context');
+
+  let currentAthlete = null;
+  let currentPlan    = null;
+
+  async function loadAthletes() {
+    try {
+      const r = await fetch(`${API}/athletes`);
+      if (!r.ok) throw new Error(`status ${r.status}`);
+      const data = await r.json();
+      const list = Array.isArray(data) ? data : (data.athletes || []);
+      picker.innerHTML = '';
+      list.slice(0, 30).forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.id || a.athlete_id;
+        opt.textContent = `${a.name || opt.value} — ${a.sport || ''}`;
+        picker.appendChild(opt);
+      });
+      if (picker.options.length > 0) {
+        currentAthlete = picker.options[0].value;
+        picker.value = currentAthlete;
+        await loadPlan();
+      }
+    } catch (err) {
+      title.textContent = 'Could not load athletes';
+      sub.textContent = err.message;
+    }
+  }
+
+  async function loadPlan(refresh = false) {
+    if (!currentAthlete) return;
+    title.textContent = 'Loading plan…';
+    grid.innerHTML = '<div class="empty-state">Loading…</div>';
+    try {
+      const url = `${API}/plan/${currentAthlete}/weekly${refresh ? '?refresh=true' : ''}`;
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`status ${r.status}`);
+      currentPlan = await r.json();
+      renderPlan(currentPlan);
+    } catch (err) {
+      title.textContent = 'Failed to load plan';
+      sub.textContent = err.message;
+      grid.innerHTML = `<div class="empty-state">${err.message}</div>`;
+    }
+  }
+
+  async function regenerate() {
+    if (!currentAthlete) return;
+    regenBtn.disabled = true;
+    regenBtn.textContent = 'Regenerating…';
+    try {
+      const r = await fetch(`${API}/plan/${currentAthlete}/regenerate`, { method: 'POST' });
+      if (!r.ok) throw new Error(`status ${r.status}`);
+      currentPlan = await r.json();
+      renderPlan(currentPlan);
+    } catch (err) {
+      alert('Regenerate failed: ' + err.message);
+    } finally {
+      regenBtn.disabled = false;
+      regenBtn.textContent = 'Regenerate';
+    }
+  }
+
+  async function completeDay(dateStr, btn) {
+    if (!currentAthlete) return;
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    try {
+      const r = await fetch(`${API}/plan/${currentAthlete}/day/${dateStr}/complete`, { method: 'POST' });
+      if (!r.ok) throw new Error(`status ${r.status}`);
+      await loadPlan();
+    } catch (err) {
+      alert('Could not mark complete: ' + err.message);
+      btn.disabled = false;
+      btn.textContent = 'Mark done';
+    }
+  }
+
+  function renderPlan(plan) {
+    title.textContent = plan.summary || 'This week';
+    sub.textContent = `${plan.sport.replace('_', ' ')} · ${plan.athlete_id}`;
+    wk.textContent = `${plan.week_start} → ${plan.week_end}`;
+    adh.textContent = `${plan.adherence_pct}%`;
+    src.textContent = plan.source;
+
+    // Context chips
+    const ctx = plan.context || {};
+    ctxEl.innerHTML = '';
+    const chips = [
+      ['Volume', ctx.volume_state || '—'],
+      ['Risk', ctx.injury_risk || '—'],
+      ['Form', ctx.form_bucket || '—'],
+      ['Sessions 14d', ctx.session_count ?? '—'],
+      ['Weak joint', (ctx.weak_joint || '—').replace('_', ' ')],
+    ];
+    chips.forEach(([k, v]) => {
+      const chip = document.createElement('div');
+      chip.className = `ctx-chip ctx-chip-${String(v).replace(/[^a-z0-9]/gi, '')}`;
+      chip.innerHTML = `<span class="ctx-k">${k}</span><span class="ctx-v">${v}</span>`;
+      ctxEl.appendChild(chip);
+    });
+
+    // Week grid
+    grid.innerHTML = '';
+    const today = new Date().toISOString().slice(0, 10);
+    plan.days.forEach(day => {
+      const card = document.createElement('div');
+      card.className = `day-card day-${day.type}${day.completed ? ' done' : ''}${day.date === today ? ' today' : ''}`;
+
+      const drillsHtml = (day.drills || []).map(d => `
+        <li class="drill">
+          <div class="drill-name">${d.name}</div>
+          <div class="drill-meta"><span class="drill-sets">${d.sets}</span> · <span class="muted small">${d.cue}</span></div>
+        </li>
+      `).join('');
+
+      const canComplete = !day.completed && day.type !== 'rest';
+
+      card.innerHTML = `
+        <div class="day-head">
+          <div class="day-day">${day.day_name}</div>
+          <div class="day-date">${day.date.slice(5)}</div>
+        </div>
+        <div class="day-label">${day.label}</div>
+        <div class="day-rpe muted small">RPE ${day.rpe} · ${day.duration_min}m</div>
+        <div class="day-rationale">${day.rationale}</div>
+        ${drillsHtml ? `<ul class="drills">${drillsHtml}</ul>` : ''}
+        ${canComplete ? `<button class="btn done-btn" data-date="${day.date}">Mark done</button>` : ''}
+        ${day.completed ? '<div class="done-badge">✓ Completed</div>' : ''}
+      `;
+      grid.appendChild(card);
+    });
+
+    grid.querySelectorAll('.done-btn').forEach(btn => {
+      btn.addEventListener('click', () => completeDay(btn.dataset.date, btn));
+    });
+  }
+
+  picker.addEventListener('change', () => {
+    currentAthlete = picker.value;
+    loadPlan();
+  });
+  regenBtn.addEventListener('click', () => regenerate());
+
+  loadAthletes();
+})();
+</script>
+
+</body>
+</html>
