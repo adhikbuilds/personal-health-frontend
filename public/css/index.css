@@ -69,6 +69,7 @@ body {
   transition: all 0.15s;
 }
 .nav-link:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+.nav-link.active { color: #06b6d4; background: rgba(6,182,212,0.08); font-weight: 600; }
 
 .nav-right { display: flex; align-items: center; gap: 14px; }
 

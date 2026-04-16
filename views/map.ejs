@@ -20,8 +20,10 @@
       <span class="logo-name">Map</span>
     </div>
     <div class="map-nav">
-      <a href="/" class="map-nav-link">Overview</a>
-      <a href="/dashboard" class="map-nav-link">Dashboard</a>
+      <a href="/" class="map-nav-link <%= currentRoute === '/' ? 'active' : '' %>">Overview</a>
+      <a href="/dashboard" class="map-nav-link <%= currentRoute === '/dashboard' ? 'active' : '' %>">Dashboard</a>
+      <a href="/wellness" class="map-nav-link <%= currentRoute === '/wellness' ? 'active' : '' %>">Wellness</a>
+      <a href="/map" class="map-nav-link <%= currentRoute === '/map' ? 'active' : '' %>">Map</a>
     </div>
     <div class="map-controls">
       <button onclick="recenter()" class="map-btn" title="Re-center on my location">⊙ My Location</button>
