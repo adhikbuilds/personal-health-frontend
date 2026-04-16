@@ -96,6 +96,7 @@ app.get('/', async (req, res) => {
 
     res.render('index', {
         config: buildConfig(),
+        currentRoute: '/',
         backendOnline: health?.status === 'ok',
         athleteCount:  health?.athlete_count  ?? 0,
         activeSessions: health?.active_sessions ?? 0,
@@ -109,6 +110,7 @@ app.get('/dashboard', async (req, res) => {
 
     res.render('dashboard', {
         config: buildConfig(),
+        currentRoute: '/dashboard',
         backendOnline: health?.status === 'ok',
     });
 });
@@ -119,6 +121,7 @@ app.get('/map', async (req, res) => {
 
     res.render('map', {
         config: buildConfig(),
+        currentRoute: '/map',
         backendOnline: health?.status === 'ok',
     });
 });
@@ -129,6 +132,7 @@ app.get('/wellness', async (req, res) => {
 
     res.render('wellness', {
         config: buildConfig(),
+        currentRoute: '/wellness',
         backendOnline: health?.status === 'ok',
     });
 });
