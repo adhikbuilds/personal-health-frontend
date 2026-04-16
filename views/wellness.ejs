@@ -37,9 +37,88 @@
       <a href="/dashboard" class="btn">Back to Dashboard</a>
     </div>
 
+    <!-- Wellness Trends Chart -->
+    <div class="wellness-chart-section ph-stagger ph-stagger-1">
+      <p class="chart-title">Team Wellness Trends</p>
+<p class="chart-sub">4-week team average — wellness &amp; sleep scores</p>
+      <% if (!isRealData) { %>
+        <p class="chart-sample-notice">Sample data — backend endpoint not yet available</p>
+      <% } %>      <canvas id="wellnessChart" height="80"></canvas>
+    </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js" integrity="sha512-ZCHVpoz7qs0pBDFgxEu2F0RLf/azmqK0RNv63b2oUP8rBKwJJIBaHqRlZkwFm8mI/NK3HmKPbq3zocyS1Wrmg==" crossorigin="anonymous"></script>    <script>
+      (function () {
+var labels       = <%- JSON.stringify(wellnessLabels) %>;
+        var wellnessData = <%- JSON.stringify(wellnessScores) %>;
+        var sleepData    = <%- JSON.stringify(sleepScores) %>;
+        var isRealData   = <%= isRealData %>;
+
+        new Chart(document.getElementById('wellnessChart'), {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: 'Avg Wellness Score',
+                data: wellnessData,
+                borderColor: '#06b6d4',
+                backgroundColor: 'rgba(6,182,212,0.08)',
+                borderWidth: 2,
+                pointBackgroundColor: '#06b6d4',
+                pointRadius: 5,
+                tension: 0.3,
+                fill: true
+              },
+              {
+                label: 'Avg Sleep Score',
+                data: sleepData,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16,185,129,0.08)',
+                borderWidth: 2,
+                pointBackgroundColor: '#10b981',
+                pointRadius: 5,
+                tension: 0.3,
+                fill: true
+              },
+              {
+                label: 'Ready Threshold (70)',
+                data: labels.map(function () { return 70; }),
+                borderColor: 'rgba(239,68,68,0.8)',
+                borderWidth: 2,
+                borderDash: [6, 4],
+                pointRadius: 0,
+                fill: false
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                labels: {
+                  color: '#ededef',
+                  font: { family: 'Barlow', size: 13 }
+                }
+              }
+            },
+            scales: {
+              x: {
+                ticks: { color: '#8a8f98', font: { family: 'Barlow' } },
+                grid:  { color: 'rgba(255,255,255,0.06)' }
+              },
+              y: {
+                min: 0, max: 100,
+                ticks: { color: '#8a8f98', font: { family: 'Barlow' } },
+                grid:  { color: 'rgba(255,255,255,0.06)' }
+              }
+            }
+          }
+        });
+      })();
+    </script>
+
     <!-- PH-V2-F-07: 2x2 preview tiles instead of single coming-soon -->
     <div class="wellness-preview-grid">
-      <div class="preview-tile ph-stagger ph-stagger-1">
+      <div class="preview-tile ph-stagger ph-stagger-2">
         <div class="preview-pill">Coming Soon</div>
         <div class="preview-icon-box">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.4 14.2l-3.4-3.4-3 3-4-4"/></svg>
@@ -53,7 +132,7 @@
         </div>
       </div>
 
-      <div class="preview-tile ph-stagger ph-stagger-2">
+      <div class="preview-tile ph-stagger ph-stagger-3">
         <div class="preview-pill">Coming Soon</div>
         <div class="preview-icon-box">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -73,7 +152,7 @@
         </div>
       </div>
 
-      <div class="preview-tile ph-stagger ph-stagger-3">
+      <div class="preview-tile ph-stagger ph-stagger-4">
         <div class="preview-pill">Coming Soon</div>
         <div class="preview-icon-box">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
@@ -88,7 +167,7 @@
         </div>
       </div>
 
-      <div class="preview-tile ph-stagger ph-stagger-4">
+      <div class="preview-tile ph-stagger ph-stagger-5">
         <div class="preview-pill">Coming Soon</div>
         <div class="preview-icon-box">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
