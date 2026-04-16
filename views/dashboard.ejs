@@ -323,9 +323,9 @@
           <tbody>${sessions.map(s => {
             const score = s.summary?.avg_form_score ?? null;
             const scoreColor = score >= 75 ? '#22c55e' : score >= 55 ? '#f59e0b' : score != null ? '#ef4444' : '#64748b';
-            return `<tr>
-              <td>${s.athlete_id || '—'}</td>
-              <td>${s.sport || '—'}</td>
+            return `<tr style="cursor:pointer;" onclick="window.location='/session/${esc(s.session_id)}'">
+              <td><a href="/athlete/${esc(s.athlete_id)}" style="color:#06b6d4;text-decoration:none;" onclick="event.stopPropagation()">${esc(s.athlete_id || '—')}</a></td>
+              <td>${esc(s.sport || '—')}</td>
               <td class="mono">${s.frame_count ?? '—'}</td>
               <td class="mono" style="color:${scoreColor};font-weight:700;">${score != null ? score.toFixed(1) : '—'}</td>
             </tr>`;
