@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Athlete Profile — Personal Health</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/public/css/dashboard.css">
+  <script src="/config.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <style>
+    .profile-header { display: flex; align-items: center; gap: 20px; margin-bottom: 24px; }
+    .profile-avatar { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #06b6d4, #8b5cf6); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; color: #fff; }
+    .profile-meta { flex: 1; }
+    .profile-name { font-size: 22px; font-weight: 900; color: #f1f5f9; }
+    .profile-sub { font-size: 13px; color: #64748b; margin-top: 2px; }
+    .grade-badge { font-size: 32px; font-weight: 900; padding: 12px 20px; border-radius: 16px; text-align: center; line-height: 1; }
+    .section-title { font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 10px; }
+    .metric-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; }
+    .metric-label { color: #94a3b8; }
+    .metric-val { color: #f1f5f9; font-weight: 700; }
+    .action-item { padding: 12px; border-radius: 10px; background: rgba(255,255,255,0.03); margin-bottom: 8px; border-left: 3px solid; }
+    .action-item.p1 { border-color: #ef4444; }
+    .action-item.p2 { border-color: #f59e0b; }
+    .action-item.p3 { border-color: #06b6d4; }
+    .action-item.p4 { border-color: #22c55e; }
+    .action-title { font-size: 13px; font-weight: 700; color: #f1f5f9; }
+    .action-detail { font-size: 11px; color: #94a3b8; margin-top: 3px; }
+    .action-urgency { font-size: 10px; color: #64748b; margin-top: 2px; text-transform: uppercase; }
+    .week-plan { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .week-card { background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px; text-align: center; }
+    .week-num { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
+    .week-focus { font-size: 13px; font-weight: 700; color: #f1f5f9; margin: 4px 0; }
+    .week-detail { font-size: 10px; color: #94a3b8; }
+    .streak-bar { display: flex; gap: 12px; align-items: center; }
+    .streak-num { font-size: 28px; font-weight: 900; }
+    .streak-label { font-size: 11px; color: #64748b; }
+    .achievement { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 12px; margin: 3px; }
+    .achievement.unlocked { background: rgba(34,197,94,0.1); color: #22c55e; border: 1px solid rgba(34,197,94,0.2); }
+    .achievement.locked { background: rgba(255,255,255,0.03); color: #475569; border: 1px solid rgba(255,255,255,0.06); }
+    .notif-item { padding: 10px; border-radius: 8px; margin-bottom: 6px; font-size: 12px; }
+    .notif-item.unread { background: rgba(6,182,212,0.08); border-left: 3px solid #06b6d4; }
+    .notif-item.read { background: rgba(255,255,255,0.02); border-left: 3px solid transparent; }
+    .back-link { color: #06b6d4; text-decoration: none; font-size: 13px; }
+    .back-link:hover { text-decoration: underline; }
+    .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+    .tab { padding: 8px 16px; border-radius: 8px; background: rgba(255,255,255,0.04); color: #94a3b8; cursor: pointer; font-size: 12px; font-weight: 600; border: none; }
+    .tab.active { background: rgba(6,182,212,0.15); color: #06b6d4; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">
+      <span class="logo-mark">PH</span>
+      <span class="logo-name">Personal Health</span>
+    </div>
+    <nav class="nav">
+      <a class="nav-item" href="/">Overview</a>
+      <a class="nav-item" href="/dashboard">Dashboard</a>
+      <a class="nav-item" href="/huddle">Huddle</a>
+      <a class="nav-item" href="/wellness">Wellness</a>
+      <a class="nav-item" href="/map">Map</a>
+    </nav>
+    <div class="sidebar-status">
+      <span class="dot <%= backendOnline ? 'green' : 'red' %>"></span>
+      <span><%= backendOnline ? 'Backend online' : 'Backend offline' %></span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <a href="/dashboard" class="back-link">&larr; Back to Dashboard</a>
+
+    <div id="profile-loading" class="empty-state" style="margin-top:40px;">Loading athlete profile...</div>
+    <div id="profile-root" style="display:none;">
+
+      <!-- Header -->
+      <div class="profile-header" id="profile-header"></div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab active" onclick="showTab('overview')">Overview</button>
+        <button class="tab" onclick="showTab('biomechanics')">Biomechanics</button>
+        <button class="tab" onclick="showTab('plan')">Training Plan</button>
+        <button class="tab" onclick="showTab('streaks')">Streaks</button>
+        <button class="tab" onclick="showTab('notifications')">Notifications</button>
+      </div>
+
+      <!-- Overview Tab -->
+      <div class="tab-content active" id="tab-overview">
+        <div class="stats-row" id="overview-cards"></div>
+        <div class="section-title">Action Items</div>
+        <div id="action-items"></div>
+        <div class="section-title">Weekly Summary</div>
+        <div id="weekly-summary"></div>
+      </div>
+
+      <!-- Biomechanics Tab -->
+      <div class="tab-content" id="tab-biomechanics">
+        <div class="section-title">Joint Profile</div>
+        <div id="joint-profile"></div>
+        <div class="section-title">Left/Right Balance</div>
+        <div id="balance-profile"></div>
+        <div class="section-title">Form Score Trend</div>
+        <div style="height:120px;"><canvas id="form-chart" height="120"></canvas></div>
+      </div>
+
+      <!-- Training Plan Tab -->
+      <div class="tab-content" id="tab-plan">
+        <div id="periodization"></div>
+        <div class="section-title">4-Week Plan</div>
+        <div class="week-plan" id="week-plan"></div>
+        <div class="section-title">Competition Timeline</div>
+        <div id="competition-timeline"></div>
+        <div class="section-title">Peer Benchmarks</div>
+        <div id="peer-benchmarks"></div>
+      </div>
+
+      <!-- Streaks Tab -->
+      <div class="tab-content" id="tab-streaks">
+        <div id="streak-info"></div>
+        <div class="section-title">Achievements</div>
+        <div id="achievements"></div>
+      </div>
+
+      <!-- Notifications Tab -->
+      <div class="tab-content" id="tab-notifications">
+        <div id="notif-list"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const API_BASE = window.AB_CONFIG?.API_BASE || '/api';
+    const _e = document.createElement('div');
+    function esc(s) { _e.textContent = s == null ? '' : String(s); return _e.innerHTML; }
+
+    const athleteId = new URLSearchParams(window.location.search).get('id') || '<%= athleteId %>';
+
+    async function get(path) {
+      try { const r = await fetch(API_BASE + path); return r.ok ? r.json() : null; } catch { return null; }
+    }
+
+    const gradeColors = { 'A+': '#22c55e', 'A': '#22c55e', 'B+': '#06b6d4', 'B': '#06b6d4', 'C+': '#f59e0b', 'C': '#f59e0b', 'D': '#ef4444' };
+    const riskColors = { low: '#22c55e', watch: '#f59e0b', high: '#ef4444', unknown: '#64748b' };
+    const phaseColors = { build: '#22c55e', accumulation: '#06b6d4', transmutation: '#f59e0b', realization: '#8b5cf6', recovery: '#ef4444' };
+
+    function showTab(name) {
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('tab-' + name).classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    async function loadProfile() {
+      const [report, streaks, achievements, notifs, weekly] = await Promise.all([
+        get(`/athlete/${athleteId}/intelligence-report?days=30`),
+        get(`/athlete/${athleteId}/streaks`),
+        get(`/athlete/${athleteId}/achievements`),
+        get(`/athlete/${athleteId}/notifications`),
+        get(`/athlete/${athleteId}/weekly-summary?weeks=4`),
+      ]);
+
+      if (!report) {
+        document.getElementById('profile-loading').textContent = 'Could not load athlete profile. Make sure the backend is running.';
+        return;
+      }
+
+      document.getElementById('profile-loading').style.display = 'none';
+      document.getElementById('profile-root').style.display = 'block';
+
+      // Header
+      const grade = report.overall_grade;
+      const gc = gradeColors[grade.letter] || '#64748b';
+      document.getElementById('profile-header').innerHTML = `
+        <div class="profile-avatar">${esc((report.athlete_name || '?')[0])}</div>
+        <div class="profile-meta">
+          <div class="profile-name">${esc(report.athlete_name)}</div>
+          <div class="profile-sub">${esc(report.sport?.replace(/_/g, ' '))} · ${esc(report.tier)} · ${report.session_count} sessions</div>
+        </div>
+        <div class="grade-badge" style="background:${gc}20;color:${gc};border:2px solid ${gc}40;">${esc(grade.letter)}<div style="font-size:11px;font-weight:400;margin-top:2px;">${grade.score}/100</div></div>
+      `;
+
+      // Overview cards
+      const t = report.trajectory;
+      const risk = report.injury_risk;
+      const load = report.training_load;
+      const rc = riskColors[risk.band] || '#64748b';
+      const pc = phaseColors[report.periodization.current_phase] || '#64748b';
+      document.getElementById('overview-cards').innerHTML = `
+        <div class="stat-card"><div class="stat-label">Trend</div><div class="stat-value" style="color:${t.trend_direction === 'improving' ? '#22c55e' : t.trend_direction === 'declining' ? '#ef4444' : '#06b6d4'}">${esc(t.trend_direction)}</div></div>
+        <div class="stat-card"><div class="stat-label">Injury Risk</div><div class="stat-value" style="color:${rc}">${esc(risk.band)}</div></div>
+        <div class="stat-card"><div class="stat-label">Phase</div><div class="stat-value" style="color:${pc}">${esc(report.periodization.current_phase)}</div></div>
+        <div class="stat-card"><div class="stat-label">Sessions/Week</div><div class="stat-value mono">${load.avg_sessions_per_week}</div></div>
+      `;
+
+      // Action items
+      const actionsHtml = (report.action_items || []).map(a => `
+        <div class="action-item p${a.priority}">
+          <div class="action-title">${esc(a.action)}</div>
+          <div class="action-detail">${esc(a.detail)}</div>
+          <div class="action-urgency">${esc(a.urgency)}</div>
+        </div>
+      `).join('');
+      document.getElementById('action-items').innerHTML = actionsHtml || '<div class="empty-state">No action items</div>';
+
+      // Weekly summary
+      if (weekly?.week_summaries) {
+        const wsHtml = weekly.week_summaries.map(w => `
+          <div class="metric-row">
+            <span class="metric-label">${esc(w.label)}</span>
+            <span class="metric-val">${w.session_count} sessions · avg ${w.avg_form_score} · ${w.total_xp} XP</span>
+          </div>
+        `).join('');
+        document.getElementById('weekly-summary').innerHTML = wsHtml;
+        if (weekly.deltas && Object.keys(weekly.deltas).length) {
+          const d = weekly.deltas;
+          document.getElementById('weekly-summary').innerHTML += `
+            <div style="margin-top:10px;padding:10px;background:rgba(255,255,255,0.03);border-radius:8px;font-size:12px;color:#94a3b8;">
+              vs last week: sessions ${d.sessions >= 0 ? '+' : ''}${d.sessions} · form ${d.avg_form_score >= 0 ? '+' : ''}${d.avg_form_score} · XP ${d.xp >= 0 ? '+' : ''}${d.xp}
+            </div>
+          `;
+        }
+      }
+
+      // Biomechanics
+      const bp = report.biomechanical_profile;
+      document.getElementById('joint-profile').innerHTML = (bp.joints || []).map(j => `
+        <div class="metric-row">
+          <span class="metric-label">${esc(j.joint.replace(/_/g, ' '))}</span>
+          <span class="metric-val" style="color:${j.status === 'in_range' ? '#22c55e' : j.deviation_deg > 10 ? '#ef4444' : '#f59e0b'}">${j.mean_deg}&deg; (${j.status === 'in_range' ? 'good' : j.deviation_deg.toFixed(0) + '&deg; off'})</span>
+        </div>
+      `).join('') || '<div class="empty-state">No joint data</div>';
+
+      document.getElementById('balance-profile').innerHTML = (bp.balance || []).map(b => `
+        <div class="metric-row">
+          <span class="metric-label">${esc(b.joint.replace(/_/g, ' '))}</span>
+          <span class="metric-val" style="color:${b.balanced ? '#22c55e' : '#f59e0b'}">L: ${b.mean_left}&deg; / R: ${b.mean_right}&deg; (${b.balanced ? 'balanced' : b.dominant_side + ' dominant'})</span>
+        </div>
+      `).join('') || '<div class="empty-state">No balance data</div>';
+
+      // Form chart
+      if (t.segments?.length > 1) {
+        new Chart(document.getElementById('form-chart').getContext('2d'), {
+          type: 'line',
+          data: {
+            labels: t.segments.map(s => 'Seg ' + s.segment),
+            datasets: [{ data: t.segments.map(s => s.avg_form), borderColor: '#06b6d4', borderWidth: 2, pointRadius: 4, tension: 0.3, fill: false }]
+          },
+          options: { animation: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#64748b' } }, y: { min: 0, max: 100, ticks: { color: '#64748b' } } }, responsive: true, maintainAspectRatio: false }
+        });
+      }
+
+      // Training plan
+      const p = report.periodization;
+      document.getElementById('periodization').innerHTML = `
+        <div class="stat-card" style="margin-bottom:16px;">
+          <div class="stat-label">Current Phase</div>
+          <div class="stat-value" style="color:${pc};font-size:20px;">${esc(p.current_phase)}</div>
+          <div style="font-size:12px;color:#94a3b8;margin-top:4px;">${esc(p.rationale)}</div>
+        </div>
+      `;
+      document.getElementById('week-plan').innerHTML = (p.four_week_plan || []).map(w => `
+        <div class="week-card">
+          <div class="week-num">Week ${w.week}</div>
+          <div class="week-focus">${esc(w.focus)}</div>
+          <div class="week-detail">${esc(w.volume)} vol · ${esc(w.intensity)} int</div>
+          <div style="font-size:10px;color:#64748b;margin-top:6px;">${esc(w.note)}</div>
+        </div>
+      `).join('');
+
+      const ct = report.competition_timeline;
+      document.getElementById('competition-timeline').innerHTML = `
+        <div class="stat-card">
+          <div class="stat-label">Estimated Ready</div>
+          <div class="stat-value mono">${ct.estimated_weeks} weeks (${esc(ct.target_date)})</div>
+          <div style="font-size:12px;color:#94a3b8;margin-top:4px;">${esc(ct.reason)}</div>
+        </div>
+      `;
+
+      const pb = report.peer_benchmarks;
+      document.getElementById('peer-benchmarks').innerHTML = `
+        <div class="metric-row"><span class="metric-label">Sport ranking</span><span class="metric-val">${esc(pb.sport_rank_label)} (${pb.sport_peers_count} peers)</span></div>
+        <div class="metric-row"><span class="metric-label">Tier ranking</span><span class="metric-val">${esc(pb.tier_rank_label)} (${pb.tier_peers_count} peers)</span></div>
+        ${pb.tier_promotion_gap ? `<div class="metric-row"><span class="metric-label">Next tier</span><span class="metric-val">${esc(pb.tier_promotion_gap.next_tier)} (need ${pb.tier_promotion_gap.bpi_needed} more BPI)</span></div>` : ''}
+      `;
+
+      // Streaks
+      if (streaks) {
+        document.getElementById('streak-info').innerHTML = `
+          <div class="streak-bar" style="margin-bottom:20px;">
+            <div><div class="streak-num" style="color:#f59e0b;">${streaks.current_streak}</div><div class="streak-label">Current streak</div></div>
+            <div><div class="streak-num" style="color:#06b6d4;">${streaks.longest_streak}</div><div class="streak-label">Longest streak</div></div>
+            <div><div class="streak-num" style="color:#22c55e;">${streaks.total_training_days}</div><div class="streak-label">Total days</div></div>
+          </div>
+          <div class="section-title">Weekly Volume</div>
+          ${(streaks.weekly_volume || []).map(w => `
+            <div class="metric-row"><span class="metric-label">${esc(w.label)}</span><span class="metric-val">${w.sessions} sessions</span></div>
+          `).join('')}
+        `;
+      }
+
+      if (achievements) {
+        const html = (achievements.unlocked || []).map(a => `<span class="achievement unlocked">${esc(a.name)}</span>`).join('')
+          + (achievements.locked || []).map(a => `<span class="achievement locked">${esc(a.name)}</span>`).join('');
+        document.getElementById('achievements').innerHTML = html || '<div class="empty-state">No achievements yet</div>';
+      }
+
+      // Notifications
+      if (notifs) {
+        const nHtml = (notifs.notifications || []).slice(0, 20).map(n => `
+          <div class="notif-item ${n.read ? 'read' : 'unread'}">
+            <div style="font-weight:700;color:#f1f5f9;">${esc(n.title)}</div>
+            <div style="color:#94a3b8;margin-top:2px;">${esc(n.body)}</div>
+            <div style="color:#475569;font-size:10px;margin-top:3px;">${esc(n.created_at?.slice(0, 16).replace('T', ' '))}</div>
+          </div>
+        `).join('');
+        document.getElementById('notif-list').innerHTML = nHtml || '<div class="empty-state">No notifications</div>';
+      }
+    }
+
+    window.onload = loadProfile;
+  </script>
+</body>
+</html>
