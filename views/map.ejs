@@ -41,6 +41,9 @@
   <script>
     const API_BASE = window.AB_CONFIG?.API_BASE || '/api';
 
+    const _escEl = document.createElement('div');
+    function esc(s) { _escEl.textContent = s == null ? '' : String(s); return _escEl.innerHTML; }
+
     let map = null;
     let userLat = null, userLng = null;
     let fieldMarkers = [], athleteMarkers = [];
@@ -49,7 +52,7 @@
     function makeFieldIcon(name) {
       return L.divIcon({
         className: '',
-        html: `<div class="map-marker field-marker" title="${name}">🏟️</div>`,
+        html: `<div class="map-marker field-marker" title="${esc(name)}">🏟️</div>`,
         iconSize: [36, 36], iconAnchor: [18, 18],
       });
     }
@@ -107,7 +110,7 @@
             const lng = f.lng || f.longitude;
             if (!lat || !lng) return;
             const m = L.marker([lat, lng], { icon: makeFieldIcon(f.name || 'Field') })
-              .bindPopup(`<b>${f.name || 'Sports Field'}</b><br>${f.city || ''} · ${f.distance_km != null ? f.distance_km.toFixed(1) + ' km away' : ''}<br><small>${(f.sports || []).join(', ')}</small>`);
+              .bindPopup(`<b>${esc(f.name || 'Sports Field')}</b><br>${esc(f.city || '')} · ${f.distance_km != null ? f.distance_km.toFixed(1) + ' km away' : ''}<br><small>${esc((f.sports || []).join(', '))}</small>`);
             fieldMarkers.push(m);
             m.addTo(map);
           });
@@ -129,7 +132,7 @@
             const lng = userLng + (Math.random() - 0.5) * 0.01;
             const initial = (a.avatar || a.name || '?')[0].toUpperCase();
             const m = L.marker([lat, lng], { icon: makeAthleteIcon(initial) })
-              .bindPopup(`<b>${a.name || a.id || 'Athlete'}</b><br>${(a.bpi || 0).toLocaleString()} BPI · ${a.sport || '—'}`);
+              .bindPopup(`<b>${esc(a.name || a.id || 'Athlete')}</b><br>${(a.bpi || 0).toLocaleString()} BPI · ${esc(a.sport || '—')}`);
             athleteMarkers.push(m);
             m.addTo(map);
           });
