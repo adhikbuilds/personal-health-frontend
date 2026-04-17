@@ -226,6 +226,7 @@ app.use('/api', createProxyMiddleware({
     on: {
         error(err, req, res) {
             console.error('[API Proxy] error:', err.message);
+            if (res.headersSent) return;
             if (err.code === 'ECONNREFUSED') {
                 res.status(503).json({ error: 'Backend offline', detail: 'Run: python api_server.py' });
             } else {
@@ -257,6 +258,7 @@ app.use('/', createProxyMiddleware({
     proxyTimeout: 20000,
     on: {
         error(err, req, res) {
+            if (res.headersSent) return;
             if (err.code === 'ECONNREFUSED') {
                 res.status(503).json({ error: 'Backend offline', code: 503 });
             } else {
