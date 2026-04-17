@@ -165,6 +165,44 @@ app.get('/wellness', async (req, res) => {
     });
 });
 
+// Dynamic Training Plan
+app.get('/plan', async (req, res) => {
+    const health = await fetchBackendData('/health', { status: 'offline' });
+    res.render('plan', {
+        config: buildConfig(),
+        backendOnline: health?.status === 'ok',
+    });
+});
+
+// Huddle Mode
+app.get('/huddle', async (req, res) => {
+    const health = await fetchBackendData('/health', { status: 'offline' });
+    res.render('huddle', {
+        config: buildConfig(),
+        backendOnline: health?.status === 'ok',
+    });
+});
+
+// Athlete Profile Page
+app.get('/athlete/:id', async (req, res) => {
+    const health = await fetchBackendData('/health', { status: 'offline' });
+    res.render('athlete', {
+        config: buildConfig(),
+        backendOnline: health?.status === 'ok',
+        athleteId: req.params.id,
+    });
+});
+
+// Session Detail Page
+app.get('/session/:id', async (req, res) => {
+    const health = await fetchBackendData('/health', { status: 'offline' });
+    res.render('session', {
+        config: buildConfig(),
+        backendOnline: health?.status === 'ok',
+        sessionId: req.params.id,
+    });
+});
+
 // ── API Routes ──────────────────────────────────────────────────────────────
 
 // Convenience status endpoint for the frontend itself
@@ -203,6 +241,12 @@ app.use('/api', createProxyMiddleware({
 // ── Phone App Transparent Proxy ──────────────────────────────────────────────
 // Android app hits http://PC_IP:8083/session/start, /rppg/frame etc.
 // Skip known page/static routes, proxy everything else straight to FastAPI.
+// Note: '/plan' is handled as a page route above but intentionally NOT added
+// here — we need `/plan/:athleteId/weekly` etc. to transparent-proxy through
+// to FastAPI for the Android client.
+// IMPORTANT: Do NOT add '/session' or '/athlete' — Express already handles
+// GET /athlete/:id and GET /session/:id above, and the Android app POSTs to
+// /session/start, /session/{id}/frame etc. which must transparent-proxy.
 const PAGE_ROUTES = ['/', '/dashboard', '/map', '/wellness', '/public', '/config.js', '/api'];
 
 app.use('/', createProxyMiddleware({
