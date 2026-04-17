@@ -21,6 +21,8 @@
     <nav class="nav">
       <a class="nav-item" href="/">Overview</a>
       <a class="nav-item active" href="/dashboard">Dashboard</a>
+      <a class="nav-item" href="/plan">Training Plan</a>
+      <a class="nav-item" href="/huddle">Huddle</a>
       <a class="nav-item" href="/wellness">Wellness</a>
       <a class="nav-item" href="/map">Map</a>
     </nav>
@@ -230,6 +232,9 @@
       if (el) el.textContent = val ?? '—';
     }
 
+    const _escEl = document.createElement('div');
+    function esc(s) { _escEl.textContent = s == null ? '' : String(s); return _escEl.innerHTML; }
+
     // ── Stats Row ─────────────────────────────────────────────────────────────
     async function loadStats() {
       const [health, active] = await Promise.all([
@@ -411,12 +416,14 @@
         const a = athleteMap[s.athlete_id] || {};
         const name = a.name || s.athlete_id || 'Unknown';
         const initials = (a.avatar || name)[0].toUpperCase();
+        const idAttr = esc(s.athlete_id || '');
+        const nameAttr = esc(name).replace(/'/g, '&#39;');
         return `
-          <div class="lb-row" style="cursor:pointer;" onclick="openAthletePanel('${s.athlete_id}','${name.replace(/'/g,"\\'")}')">
-            <span class="ph-avatar">${initials}</span>
+          <div class="lb-row" style="cursor:pointer;" onclick="openAthletePanel('${idAttr}','${nameAttr}')">
+            <span class="ph-avatar">${esc(initials)}</span>
             <div class="lb-info">
-              <div class="lb-name">${name}</div>
-              <div class="lb-meta">${s.sport || '—'} · ${timeAgo(s.started_at)}</div>
+              <div class="lb-name">${esc(name)}</div>
+              <div class="lb-meta">${esc(s.sport || '—')} · ${esc(timeAgo(s.started_at))}</div>
             </div>
             <span class="lb-score tabular">
               ${dotClass ? `<span class="ph-dot ${dotClass}"></span>` : ''}
