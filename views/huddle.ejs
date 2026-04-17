@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personal Health — Huddle Mode</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/public/css/dashboard.css">
+  <link rel="stylesheet" href="/public/css/plan.css">
+  <script src="/config.js"></script>
+</head>
+<body>
+
+  <aside class="sidebar">
+    <div class="logo">
+      <span class="logo-mark">PH</span>
+      <span class="logo-name">Personal Health</span>
+    </div>
+    <nav class="nav">
+      <a class="nav-item" href="/">Overview</a>
+      <a class="nav-item" href="/dashboard">Dashboard</a>
+      <a class="nav-item" href="/plan">Training Plan</a>
+      <a class="nav-item active" href="/huddle">Huddle</a>
+      <a class="nav-item" href="/wellness">Wellness</a>
+      <a class="nav-item" href="/map">Map</a>
+    </nav>
+    <div class="sidebar-status">
+      <span class="dot <%= backendOnline ? 'green' : 'red' %>"></span>
+      <span><%= backendOnline ? 'Backend online' : 'Backend offline' %></span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1>Huddle Mode</h1>
+        <p class="sub">Group training sessions — coaches run huddles, athletes compete live.</p>
+      </div>
+      <button class="btn" id="create-btn">Create Huddle</button>
+    </div>
+
+    <!-- Active Huddle -->
+    <div class="card" id="active-section" style="margin-bottom:16px;display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div>
+          <div style="font-size:16px;font-weight:700" id="active-name"></div>
+          <div class="muted small" id="active-meta"></div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn" id="start-btn" style="display:none">Start</button>
+          <button class="btn" id="end-btn" style="background:var(--red);display:none">End Huddle</button>
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse" id="live-table">
+        <thead><tr style="border-bottom:1px solid var(--border)">
+          <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:11px">Rank</th>
+          <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:11px">Athlete</th>
+          <th style="text-align:right;padding:6px 8px;color:var(--muted);font-size:11px">Score</th>
+          <th style="text-align:right;padding:6px 8px;color:var(--muted);font-size:11px">Frames</th>
+        </tr></thead>
+        <tbody id="live-body"></tbody>
+      </table>
+    </div>
+
+    <!-- Huddle List -->
+    <div id="huddle-list"></div>
+  </main>
+
+<script>
+(function(){
+  const API = (window.AB_CONFIG && window.AB_CONFIG.API_BASE) || '/api';
+  const createBtn = document.getElementById('create-btn');
+  const activeSection = document.getElementById('active-section');
+  const activeName = document.getElementById('active-name');
+  const activeMeta = document.getElementById('active-meta');
+  const startBtn = document.getElementById('start-btn');
+  const endBtn = document.getElementById('end-btn');
+  const liveBody = document.getElementById('live-body');
+  const huddleList = document.getElementById('huddle-list');
+  let currentHuddle = null;
+  let pollTimer = null;
+
+  async function loadHuddles() {
+    try {
+      const r = await fetch(`${API}/huddles`);
+      const data = await r.json();
+      const list = Array.isArray(data) ? data : data.huddles || [];
+      renderList(list);
+      const active = list.find(h => h.status === 'active' || h.status === 'waiting');
+      if (active) { currentHuddle = active; showActive(active); }
+      else { activeSection.style.display = 'none'; stopPoll(); }
+    } catch(e) { console.error(e); }
+  }
+
+  function renderList(list) {
+    huddleList.innerHTML = list.map(h => `
+      <div class="card" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-weight:600">${h.name}</div>
+          <div class="muted small">${(h.sport||'').replace('_',' ')} · ${(h.athletes||[]).length}/${h.max_athletes} · ${h.status}</div>
+        </div>
+        <div class="muted small">${h.huddle_id}</div>
+      </div>
+    `).join('');
+  }
+
+  function showActive(h) {
+    activeSection.style.display = 'block';
+    activeName.textContent = h.name;
+    activeMeta.textContent = `${(h.sport||'').replace('_',' ')} · ${(h.athletes||[]).length} athletes · ${h.status}`;
+    startBtn.style.display = h.status === 'waiting' ? 'inline-block' : 'none';
+    endBtn.style.display = h.status === 'active' ? 'inline-block' : 'none';
+    if (h.status === 'active') { startPoll(h.huddle_id); }
+    renderLeaderboard(h.leaderboard || []);
+  }
+
+  function renderLeaderboard(athletes) {
+    liveBody.innerHTML = athletes.map((a, i) => `
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:8px;font-weight:700;color:${i<3?'var(--accent)':'var(--text)'}">${i+1}</td>
+        <td style="padding:8px">${a.name || a.athlete_id}</td>
+        <td style="padding:8px;text-align:right;font-family:monospace;font-weight:700;color:var(--accent)">${(a.avg_form_score||a.avg_score||0).toFixed(1)}</td>
+        <td style="padding:8px;text-align:right;color:var(--muted)">${a.total_frames||0}</td>
+      </tr>
+    `).join('');
+  }
+
+  function startPoll(hid) {
+    stopPoll();
+    pollTimer = setInterval(async () => {
+      try {
+        const r = await fetch(`${API}/huddle/${hid}/live`);
+        const data = await r.json();
+        renderLeaderboard(data.athletes || data.leaderboard || []);
+      } catch(e) {}
+    }, 3000);
+  }
+  function stopPoll() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+
+  createBtn.addEventListener('click', async () => {
+    const name = prompt('Huddle name:');
+    if (!name) return;
+    const sport = prompt('Sport (vertical_jump, sprint, snatch, javelin, cricket_bat):', 'vertical_jump');
+    await fetch(`${API}/huddle/create`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ name, sport }),
+    });
+    loadHuddles();
+  });
+
+  startBtn.addEventListener('click', async () => {
+    if (!currentHuddle) return;
+    await fetch(`${API}/huddle/${currentHuddle.huddle_id}/start`, { method: 'POST' });
+    loadHuddles();
+  });
+
+  endBtn.addEventListener('click', async () => {
+    if (!currentHuddle) return;
+    if (!confirm('End this huddle?')) return;
+    await fetch(`${API}/huddle/${currentHuddle.huddle_id}/end`, { method: 'POST' });
+    stopPoll();
+    loadHuddles();
+  });
+
+  loadHuddles();
+})();
+</script>
+
+</body>
+</html>
