@@ -5,12 +5,13 @@ import { api, safeQuery } from '../lib/api'
 const navItems = [
   { to: '/', label: 'Overview' },
   { to: '/dashboard', label: 'Dashboard' },
+  { to: '/compose', label: 'Compose' },
   { to: '/inbox', label: 'Inbox' },
   { to: '/community', label: 'Community' },
   { to: '/leaderboard', label: 'Leaderboard' },
   { to: '/huddle', label: 'Huddle' },
   { to: '/plan', label: 'Plan' },
-  { to: '/wellness', label: 'Wellness' },
+  { to: '/wellness', label: 'Wellness Analytics' },
   { to: '/map', label: 'Map' },
 ]
 
