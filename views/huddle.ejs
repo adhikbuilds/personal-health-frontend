@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Personal Health — Huddle Mode</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/public/css/tokens.css">
   <link rel="stylesheet" href="/public/css/dashboard.css">
-  <link rel="stylesheet" href="/public/css/plan.css">
+  <link rel="stylesheet" href="/public/css/huddle.css">
   <script src="/config.js"></script>
 </head>
 <body>
@@ -34,95 +35,301 @@
     <div class="page-header">
       <div>
         <h1>Huddle Mode</h1>
-        <p class="sub">Group training sessions — coaches run huddles, athletes compete live.</p>
+        <p class="sub">Run coach-led live training rooms with quick setup, live leaderboards, and clean handoff from warm-up to competition.</p>
       </div>
-      <button class="btn" id="create-btn">Create Huddle</button>
+      <div class="header-actions">
+        <button class="filter-chip active" data-filter="all">All rooms</button>
+        <button class="filter-chip" data-filter="waiting">Waiting</button>
+        <button class="filter-chip" data-filter="active">Live</button>
+        <button class="filter-chip" data-filter="ended">Ended</button>
+        <button class="btn" id="create-btn">Create Huddle</button>
+      </div>
     </div>
 
-    <!-- Active Huddle -->
-    <div class="card" id="active-section" style="margin-bottom:16px;display:none">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <section class="huddle-hero">
+      <div class="hero-copy">
+        <span class="eyebrow">Coach workflow</span>
+        <h2>From team check-in to live leaderboard without breaking the flow.</h2>
+        <p>Set the room, assign the sport, pull in a coach, then watch live scoring update as athletes train on the app.</p>
+      </div>
+      <div class="hero-metrics" id="summary-strip">
+        <div class="ph-stat-card">
+          <div class="label">Total Rooms</div>
+          <div class="value" id="metric-total">0</div>
+          <div class="delta">All huddles created</div>
+        </div>
+        <div class="ph-stat-card">
+          <div class="label">Live Now</div>
+          <div class="value" id="metric-active">0</div>
+          <div class="delta">Rooms actively scoring</div>
+        </div>
+        <div class="ph-stat-card warm">
+          <div class="label">Athletes Queued</div>
+          <div class="value" id="metric-athletes">0</div>
+          <div class="delta">Across visible rooms</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="active-stage card" id="active-section" style="display:none">
+      <div class="active-stage-header">
         <div>
-          <div style="font-size:16px;font-weight:700" id="active-name"></div>
-          <div class="muted small" id="active-meta"></div>
+          <div class="section-kicker">Live room</div>
+          <div class="active-stage-title" id="active-name"></div>
+          <div class="muted" id="active-meta"></div>
         </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn" id="start-btn" style="display:none">Start</button>
-          <button class="btn" id="end-btn" style="background:var(--red);display:none">End Huddle</button>
+        <div class="active-actions">
+          <button class="btn" id="start-btn" style="display:none">Start Session</button>
+          <button class="btn danger" id="end-btn" style="display:none">End Huddle</button>
         </div>
       </div>
-      <table style="width:100%;border-collapse:collapse" id="live-table">
-        <thead><tr style="border-bottom:1px solid var(--border)">
-          <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:11px">Rank</th>
-          <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:11px">Athlete</th>
-          <th style="text-align:right;padding:6px 8px;color:var(--muted);font-size:11px">Score</th>
-          <th style="text-align:right;padding:6px 8px;color:var(--muted);font-size:11px">Frames</th>
-        </tr></thead>
-        <tbody id="live-body"></tbody>
-      </table>
-    </div>
+      <div class="active-body">
+        <div class="stage-rail">
+          <div class="rail-card">
+            <span class="rail-label">Session Goal</span>
+            <strong id="active-goal">Warm the group up, then move into scored reps.</strong>
+          </div>
+          <div class="rail-card">
+            <span class="rail-label">Coach Tip</span>
+            <strong id="active-tip">Open with one cue everyone can remember, then let the leaderboard do the talking.</strong>
+          </div>
+        </div>
+        <div class="leaderboard-shell">
+          <div class="leaderboard-head">
+            <span>Live leaderboard</span>
+            <span class="muted small" id="live-timestamp"></span>
+          </div>
+          <table class="huddle-table" id="live-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Athlete</th>
+                <th>Score</th>
+                <th>Frames</th>
+              </tr>
+            </thead>
+            <tbody id="live-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
 
-    <!-- Huddle List -->
-    <div id="huddle-list"></div>
+    <section class="list-shell">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">Rooms</div>
+          <h3>Huddle roster</h3>
+        </div>
+        <div class="muted small" id="results-meta">Loading rooms...</div>
+      </div>
+      <div class="huddle-grid" id="huddle-list"></div>
+    </section>
   </main>
+
+  <div class="modal-backdrop" id="modal-backdrop" hidden>
+    <div class="modal-card">
+      <div class="modal-head">
+        <div>
+          <div class="section-kicker">New room</div>
+          <h3>Create a huddle</h3>
+        </div>
+        <button class="close-btn" id="close-modal" aria-label="Close dialog">&times;</button>
+      </div>
+      <form id="create-form" class="create-form">
+        <label>
+          <span>Huddle name</span>
+          <input type="text" id="huddle-name" placeholder="Friday Jump Lab" required>
+        </label>
+        <label>
+          <span>Sport</span>
+          <select id="huddle-sport">
+            <option value="vertical_jump">Vertical Jump</option>
+            <option value="sprint">Sprint</option>
+            <option value="snatch">Snatch</option>
+            <option value="javelin">Javelin</option>
+            <option value="cricket_bat">Cricket Bat</option>
+          </select>
+        </label>
+        <label>
+          <span>Coach</span>
+          <select id="coach-picker">
+            <option value="">No coach assigned</option>
+          </select>
+        </label>
+        <label>
+          <span>Capacity</span>
+          <input type="number" id="huddle-capacity" value="12" min="2" max="60">
+        </label>
+        <button class="btn" type="submit">Create Room</button>
+      </form>
+    </div>
+  </div>
 
 <script>
 (function(){
   const API = (window.AB_CONFIG && window.AB_CONFIG.API_BASE) || '/api';
   const createBtn = document.getElementById('create-btn');
+  const createForm = document.getElementById('create-form');
+  const modalBackdrop = document.getElementById('modal-backdrop');
+  const closeModalBtn = document.getElementById('close-modal');
   const activeSection = document.getElementById('active-section');
   const activeName = document.getElementById('active-name');
   const activeMeta = document.getElementById('active-meta');
+  const activeGoal = document.getElementById('active-goal');
+  const activeTip = document.getElementById('active-tip');
   const startBtn = document.getElementById('start-btn');
   const endBtn = document.getElementById('end-btn');
   const liveBody = document.getElementById('live-body');
   const huddleList = document.getElementById('huddle-list');
+  const resultsMeta = document.getElementById('results-meta');
+  const coachPicker = document.getElementById('coach-picker');
   let currentHuddle = null;
   let pollTimer = null;
+  let currentFilter = 'all';
+  let allHuddles = [];
+
+  function prettySport(sport) {
+    return String(sport || 'general').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  function statusTone(status) {
+    if (status === 'active') return 'live';
+    if (status === 'waiting') return 'waiting';
+    return 'ended';
+  }
+
+  function openModal() {
+    modalBackdrop.hidden = false;
+    document.getElementById('huddle-name').focus();
+  }
+
+  function closeModal() {
+    modalBackdrop.hidden = true;
+    createForm.reset();
+    document.getElementById('huddle-capacity').value = 12;
+  }
+
+  async function loadCoaches() {
+    try {
+      const r = await fetch(`${API}/athletes`);
+      if (!r.ok) return;
+      const data = await r.json();
+      const athletes = Array.isArray(data) ? data : data.athletes || [];
+      coachPicker.innerHTML = '<option value="">No coach assigned</option>';
+      athletes.slice(0, 30).forEach(athlete => {
+        const opt = document.createElement('option');
+        opt.value = athlete.id || '';
+        opt.textContent = `${athlete.name || athlete.id} · ${prettySport(athlete.sport)}`;
+        coachPicker.appendChild(opt);
+      });
+    } catch (e) {}
+  }
 
   async function loadHuddles() {
     try {
       const r = await fetch(`${API}/huddles`);
       const data = await r.json();
-      const list = Array.isArray(data) ? data : data.huddles || [];
-      renderList(list);
-      const active = list.find(h => h.status === 'active' || h.status === 'waiting');
+      allHuddles = Array.isArray(data) ? data : data.huddles || [];
+      const visible = currentFilter === 'all'
+        ? allHuddles
+        : allHuddles.filter(h => h.status === currentFilter);
+      renderSummary(allHuddles, visible);
+      renderList(visible);
+      const active = allHuddles.find(h => h.status === 'active' || h.status === 'waiting');
       if (active) { currentHuddle = active; showActive(active); }
       else { activeSection.style.display = 'none'; stopPoll(); }
     } catch(e) { console.error(e); }
   }
 
+  function renderSummary(all, visible) {
+    const live = all.filter(h => h.status === 'active').length;
+    const athletes = visible.reduce((sum, h) => sum + ((h.athletes || []).length || 0), 0);
+    document.getElementById('metric-total').textContent = String(all.length);
+    document.getElementById('metric-active').textContent = String(live);
+    document.getElementById('metric-athletes').textContent = String(athletes);
+    resultsMeta.textContent = `${visible.length} room${visible.length === 1 ? '' : 's'} visible`;
+  }
+
   function renderList(list) {
-    huddleList.innerHTML = list.map(h => `
-      <div class="card" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <div style="font-weight:600">${h.name}</div>
-          <div class="muted small">${(h.sport||'').replace('_',' ')} · ${(h.athletes||[]).length}/${h.max_athletes} · ${h.status}</div>
+    if (!list.length) {
+      huddleList.innerHTML = '<div class="empty-card">No rooms match this filter yet. Create one to get the workflow started.</div>';
+      return;
+    }
+    huddleList.innerHTML = list.map(h => {
+      const leaderboard = (h.leaderboard || []).slice(0, 3);
+      return `
+      <article class="huddle-card">
+        <div class="huddle-card-top">
+          <div>
+            <span class="status-pill ${statusTone(h.status)}">${h.status}</span>
+            <h4>${h.name}</h4>
+            <p>${prettySport(h.sport)} · ${(h.athletes || []).length}/${h.max_athletes} athletes</p>
+          </div>
+          <div class="small muted mono">${h.huddle_id}</div>
         </div>
-        <div class="muted small">${h.huddle_id}</div>
-      </div>
-    `).join('');
+        <div class="card-meta-grid">
+          <div>
+            <span class="meta-label">Coach</span>
+            <strong>${h.coach_id || 'Unassigned'}</strong>
+          </div>
+          <div>
+            <span class="meta-label">Created</span>
+            <strong>${h.created_at ? new Date(h.created_at).toLocaleDateString() : 'Today'}</strong>
+          </div>
+          <div>
+            <span class="meta-label">Top score</span>
+            <strong>${leaderboard[0] ? (leaderboard[0].avg_form_score || leaderboard[0].avg_score || 0).toFixed(1) : '—'}</strong>
+          </div>
+        </div>
+        <div class="preview-list">
+          ${leaderboard.length ? leaderboard.map((a, i) => `
+            <div class="preview-row">
+              <span>#${i + 1}</span>
+              <span>${a.name || a.athlete_id}</span>
+              <span>${(a.avg_form_score || a.avg_score || 0).toFixed(1)}</span>
+            </div>
+          `).join('') : '<div class="empty-inline">Leaderboard will appear once the room starts receiving live data.</div>'}
+        </div>
+        <div class="card-actions">
+          ${h.status === 'waiting' ? `<button class="btn" data-action="start" data-id="${h.huddle_id}">Start</button>` : ''}
+          ${h.status === 'active' ? `<button class="btn danger" data-action="end" data-id="${h.huddle_id}">End</button>` : ''}
+          <button class="ghost-btn" data-action="focus" data-id="${h.huddle_id}">Focus Room</button>
+        </div>
+      </article>`;
+    }).join('');
   }
 
   function showActive(h) {
     activeSection.style.display = 'block';
     activeName.textContent = h.name;
-    activeMeta.textContent = `${(h.sport||'').replace('_',' ')} · ${(h.athletes||[]).length} athletes · ${h.status}`;
+    activeMeta.textContent = `${prettySport(h.sport)} · ${(h.athletes||[]).length} athletes · ${h.status}`;
+    activeGoal.textContent = h.status === 'waiting'
+      ? 'Set expectations, confirm athlete attendance, and start when the room is ready.'
+      : 'Keep the room moving with one cue at a time and let the scoring surface standouts.';
+    activeTip.textContent = h.status === 'waiting'
+      ? 'Use this waiting state to align the group on intent, scoring, and rep standard.'
+      : 'Watch for athletes dropping below the group baseline and redirect them before fatigue compounds.';
     startBtn.style.display = h.status === 'waiting' ? 'inline-block' : 'none';
     endBtn.style.display = h.status === 'active' ? 'inline-block' : 'none';
     if (h.status === 'active') { startPoll(h.huddle_id); }
+    else { stopPoll(); }
     renderLeaderboard(h.leaderboard || []);
   }
 
   function renderLeaderboard(athletes) {
+    if (!athletes.length) {
+      liveBody.innerHTML = '<tr><td colspan="4" class="empty-table">No live athletes yet. Once phones begin streaming, the room ranking will appear here.</td></tr>';
+      return;
+    }
     liveBody.innerHTML = athletes.map((a, i) => `
-      <tr style="border-bottom:1px solid var(--border)">
-        <td style="padding:8px;font-weight:700;color:${i<3?'var(--accent)':'var(--text)'}">${i+1}</td>
-        <td style="padding:8px">${a.name || a.athlete_id}</td>
-        <td style="padding:8px;text-align:right;font-family:monospace;font-weight:700;color:var(--accent)">${(a.avg_form_score||a.avg_score||0).toFixed(1)}</td>
-        <td style="padding:8px;text-align:right;color:var(--muted)">${a.total_frames||0}</td>
+      <tr>
+        <td>${i + 1}</td>
+        <td>${a.name || a.athlete_id}</td>
+        <td class="score-cell">${(a.avg_form_score||a.avg_score||0).toFixed(1)}</td>
+        <td class="muted">${a.total_frames||0}</td>
       </tr>
     `).join('');
+    document.getElementById('live-timestamp').textContent = `Updated ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   }
 
   function startPoll(hid) {
@@ -137,14 +344,25 @@
   }
   function stopPoll() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
 
-  createBtn.addEventListener('click', async () => {
-    const name = prompt('Huddle name:');
+  createBtn.addEventListener('click', openModal);
+  closeModalBtn.addEventListener('click', closeModal);
+  modalBackdrop.addEventListener('click', (event) => {
+    if (event.target === modalBackdrop) closeModal();
+  });
+
+  createForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const name = document.getElementById('huddle-name').value.trim();
+    const sport = document.getElementById('huddle-sport').value;
+    const coach_id = coachPicker.value || null;
+    const max_athletes = Number(document.getElementById('huddle-capacity').value || 12);
     if (!name) return;
-    const sport = prompt('Sport (vertical_jump, sprint, snatch, javelin, cricket_bat):', 'vertical_jump');
     await fetch(`${API}/huddle/create`, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ name, sport }),
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ name, sport, coach_id, max_athletes }),
     });
+    closeModal();
     loadHuddles();
   });
 
@@ -162,6 +380,41 @@
     loadHuddles();
   });
 
+  huddleList.addEventListener('click', async (event) => {
+    const button = event.target.closest('button');
+    if (!button) return;
+    const id = button.dataset.id;
+    if (!id) return;
+    if (button.dataset.action === 'start') {
+      await fetch(`${API}/huddle/${id}/start`, { method: 'POST' });
+      loadHuddles();
+      return;
+    }
+    if (button.dataset.action === 'end') {
+      await fetch(`${API}/huddle/${id}/end`, { method: 'POST' });
+      loadHuddles();
+      return;
+    }
+    if (button.dataset.action === 'focus') {
+      const target = allHuddles.find(h => h.huddle_id === id);
+      if (target) {
+        currentHuddle = target;
+        showActive(target);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+  });
+
+  document.querySelectorAll('.filter-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentFilter = btn.dataset.filter;
+      document.querySelectorAll('.filter-chip').forEach(chip => chip.classList.remove('active'));
+      btn.classList.add('active');
+      loadHuddles();
+    });
+  });
+
+  loadCoaches();
   loadHuddles();
 })();
 </script>
