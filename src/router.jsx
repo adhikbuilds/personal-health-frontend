@@ -13,6 +13,7 @@ import { MapPage } from './pages/MapPage'
 import { CommunityPage } from './pages/CommunityPage'
 import { LeaderboardPage } from './pages/LeaderboardPage'
 import { InboxPage } from './pages/InboxPage'
+import { ComposePage } from './pages/ComposePage'
 
 const rootRoute = createRootRoute({
   component: AppShell,
@@ -75,6 +76,12 @@ const inboxRoute = createRoute({
   component: InboxPage,
 })
 
+const composeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/compose',
+  component: ComposePage,
+})
+
 const athleteRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/athlete/$athleteId',
@@ -118,6 +125,7 @@ const routeTree = rootRoute.addChildren([
   communityRoute,
   leaderboardRoute,
   inboxRoute,
+  composeRoute,
   athleteRoute,
   sessionRoute,
   coachMorningRoute,
