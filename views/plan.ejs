@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Personal Health — Training Plan</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/public/css/tokens.css">
   <link rel="stylesheet" href="/public/css/dashboard.css">
   <link rel="stylesheet" href="/public/css/plan.css">
   <script src="/config.js"></script>
@@ -35,7 +36,7 @@
     <div class="page-header">
       <div>
         <h1>Dynamic Training Plan</h1>
-        <p class="sub">Personalized 7-day plan based on recent form, weak joints, and recovery state.</p>
+        <p class="sub">A coach-friendly weekly brief shaped by form, recovery, load, and the weak links the backend is already tracking.</p>
       </div>
       <div class="header-actions">
         <select id="athlete-picker" class="picker"></select>
@@ -43,34 +44,92 @@
       </div>
     </div>
 
-    <!-- Summary strip -->
-    <div class="plan-summary card">
-      <div class="plan-summary-text">
-        <div class="plan-summary-title" id="plan-title">Loading plan…</div>
-        <div class="plan-summary-sub muted" id="plan-sub"></div>
+    <section class="plan-hero">
+      <div class="plan-summary card">
+        <div class="plan-summary-text">
+          <span class="plan-kicker">Weekly brief</span>
+          <div class="plan-summary-title" id="plan-title">Loading plan…</div>
+          <div class="plan-summary-sub muted" id="plan-sub"></div>
+          <div class="plan-summary-note" id="plan-note">Building the recommendation layer from recent athlete context.</div>
+        </div>
+        <div class="plan-summary-stats">
+          <div class="plan-stat">
+            <div class="plan-stat-label">Week</div>
+            <div class="plan-stat-value mono" id="plan-week">—</div>
+          </div>
+          <div class="plan-stat">
+            <div class="plan-stat-label">Adherence</div>
+            <div class="plan-stat-value mono" id="plan-adh">—</div>
+          </div>
+          <div class="plan-stat">
+            <div class="plan-stat-label">Source</div>
+            <div class="plan-stat-value mono" id="plan-source">—</div>
+          </div>
+        </div>
       </div>
-      <div class="plan-summary-stats">
-        <div class="plan-stat">
-          <div class="plan-stat-label">Week</div>
-          <div class="plan-stat-value mono" id="plan-week">—</div>
+      <aside class="today-spotlight card">
+        <span class="plan-kicker">Today</span>
+        <h2 id="spotlight-title">Preparing today’s focus…</h2>
+        <p id="spotlight-copy">We’ll highlight the key session once the plan is loaded.</p>
+        <div class="spotlight-badges">
+          <span class="spotlight-chip" id="spotlight-rpe">RPE —</span>
+          <span class="spotlight-chip" id="spotlight-duration">Duration —</span>
         </div>
-        <div class="plan-stat">
-          <div class="plan-stat-label">Adherence</div>
-          <div class="plan-stat-value mono" id="plan-adh">—</div>
-        </div>
-        <div class="plan-stat">
-          <div class="plan-stat-label">Source</div>
-          <div class="plan-stat-value mono" id="plan-source">—</div>
-        </div>
-      </div>
-    </div>
+      </aside>
+    </section>
 
-    <!-- Context chips -->
-    <div class="plan-context" id="plan-context"></div>
+    <div class="plan-content">
+      <section class="plan-main">
+        <div class="plan-context-wrap">
+          <div class="plan-section-head">
+            <div>
+              <span class="plan-kicker">Inputs</span>
+              <h2>What shaped this week</h2>
+            </div>
+            <p class="muted">These signals are pulled from recent performance and readiness data.</p>
+          </div>
+          <div class="plan-context" id="plan-context"></div>
+        </div>
 
-    <!-- 7-day calendar -->
-    <div class="plan-week" id="plan-week-grid">
-      <div class="empty-state">Loading…</div>
+        <div class="plan-method card" id="plan-method">
+          <span class="plan-kicker">Coach readout</span>
+          <h2>This week’s logic</h2>
+          <p id="method-copy">The narrative for this plan will appear here.</p>
+        </div>
+
+        <div class="plan-section-head">
+          <div>
+            <span class="plan-kicker">Execution</span>
+            <h2>7-day training map</h2>
+          </div>
+          <p class="muted" id="completion-copy">Loading week structure…</p>
+        </div>
+
+        <div class="plan-week" id="plan-week-grid">
+          <div class="empty-state">Loading…</div>
+        </div>
+      </section>
+
+      <aside class="plan-sidebar">
+        <div class="card sidebar-card">
+          <span class="plan-kicker">Consistency</span>
+          <h2>Week history</h2>
+          <div id="history-list" class="history-list">
+            <div class="empty-state">Waiting for plan history…</div>
+          </div>
+        </div>
+
+        <div class="card sidebar-card">
+          <span class="plan-kicker">Readiness</span>
+          <h2>Quick scan</h2>
+          <div id="quick-scan" class="quick-scan">
+            <div class="scan-row"><span>Volume state</span><strong id="scan-volume">—</strong></div>
+            <div class="scan-row"><span>Injury risk</span><strong id="scan-risk">—</strong></div>
+            <div class="scan-row"><span>Weak joint</span><strong id="scan-joint">—</strong></div>
+            <div class="scan-row"><span>Recent sessions</span><strong id="scan-sessions">—</strong></div>
+          </div>
+        </div>
+      </aside>
     </div>
 
   </main>
@@ -87,6 +146,14 @@
   const adh      = document.getElementById('plan-adh');
   const src      = document.getElementById('plan-source');
   const ctxEl    = document.getElementById('plan-context');
+  const noteEl   = document.getElementById('plan-note');
+  const methodEl = document.getElementById('method-copy');
+  const completionEl = document.getElementById('completion-copy');
+  const historyEl = document.getElementById('history-list');
+  const spotlightTitle = document.getElementById('spotlight-title');
+  const spotlightCopy = document.getElementById('spotlight-copy');
+  const spotlightRpe = document.getElementById('spotlight-rpe');
+  const spotlightDuration = document.getElementById('spotlight-duration');
 
   let currentAthlete = null;
   let currentPlan    = null;
@@ -121,10 +188,14 @@
     grid.innerHTML = '<div class="empty-state">Loading…</div>';
     try {
       const url = `${API}/plan/${currentAthlete}/weekly${refresh ? '?refresh=true' : ''}`;
-      const r = await fetch(url);
-      if (!r.ok) throw new Error(`status ${r.status}`);
-      currentPlan = await r.json();
+      const [planRes, historyRes] = await Promise.all([
+        fetch(url),
+        fetch(`${API}/plan/${currentAthlete}/history?limit=6`),
+      ]);
+      if (!planRes.ok) throw new Error(`status ${planRes.status}`);
+      currentPlan = await planRes.json();
       renderPlan(currentPlan);
+      renderHistory(historyRes.ok ? await historyRes.json() : null);
     } catch (err) {
       title.textContent = 'Failed to load plan';
       sub.textContent = err.message;
@@ -170,6 +241,9 @@
     wk.textContent = `${plan.week_start} → ${plan.week_end}`;
     adh.textContent = `${plan.adherence_pct}%`;
     src.textContent = plan.source;
+    noteEl.textContent = plan.source === 'llm'
+      ? 'Narrative framing came from the coach layer, with structure anchored to tracked backend signals.'
+      : 'Plan structure was assembled deterministically from the current readiness and performance context.';
 
     // Context chips
     const ctx = plan.context || {};
@@ -187,10 +261,35 @@
       chip.innerHTML = `<span class="ctx-k">${k}</span><span class="ctx-v">${v}</span>`;
       ctxEl.appendChild(chip);
     });
+    document.getElementById('scan-volume').textContent = ctx.volume_state || '—';
+    document.getElementById('scan-risk').textContent = ctx.injury_risk || '—';
+    document.getElementById('scan-joint').textContent = (ctx.weak_joint || '—').replace(/_/g, ' ');
+    document.getElementById('scan-sessions').textContent = String(ctx.session_count ?? '—');
+
+    const completedDays = (plan.days || []).filter(day => day.completed).length;
+    completionEl.textContent = `${completedDays} of ${(plan.days || []).length} days completed this week.`;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const spotlight = plan.days.find(day => day.date === today) || plan.days.find(day => !day.completed && day.type !== 'rest') || plan.days[0];
+    if (spotlight) {
+      spotlightTitle.textContent = spotlight.label;
+      spotlightCopy.textContent = spotlight.rationale || 'No rationale provided for this day.';
+      spotlightRpe.textContent = `RPE ${spotlight.rpe}`;
+      spotlightDuration.textContent = `${spotlight.duration_min} min`;
+    } else {
+      spotlightTitle.textContent = 'No sessions this week';
+      spotlightCopy.textContent = 'Once a weekly structure is generated, today’s focus will appear here.';
+      spotlightRpe.textContent = 'RPE —';
+      spotlightDuration.textContent = 'Duration —';
+    }
+
+    const risk = (ctx.injury_risk || 'unknown').replace(/_/g, ' ');
+    const form = (ctx.form_bucket || 'mixed').replace(/_/g, ' ');
+    const joint = (ctx.weak_joint || 'movement quality').replace(/_/g, ' ');
+    methodEl.textContent = `This week leans ${ctx.volume_state || 'balanced'} because injury risk is ${risk}, recent form is ${form}, and ${joint} looks like the clearest area to protect or improve.`;
 
     // Week grid
     grid.innerHTML = '';
-    const today = new Date().toISOString().slice(0, 10);
     plan.days.forEach(day => {
       const card = document.createElement('div');
       card.className = `day-card day-${day.type}${day.completed ? ' done' : ''}${day.date === today ? ' today' : ''}`;
@@ -209,6 +308,7 @@
           <div class="day-day">${day.day_name}</div>
           <div class="day-date">${day.date.slice(5)}</div>
         </div>
+        <div class="day-type">${day.type.replace(/_/g, ' ')}</div>
         <div class="day-label">${day.label}</div>
         <div class="day-rpe muted small">RPE ${day.rpe} · ${day.duration_min}m</div>
         <div class="day-rationale">${day.rationale}</div>
@@ -222,6 +322,27 @@
     grid.querySelectorAll('.done-btn').forEach(btn => {
       btn.addEventListener('click', () => completeDay(btn.dataset.date, btn));
     });
+  }
+
+  function renderHistory(history) {
+    const weeks = history?.weeks || [];
+    if (!weeks.length) {
+      historyEl.innerHTML = '<div class="empty-state">No previous weeks saved yet. As this athlete trains, previous plan snapshots will show up here.</div>';
+      return;
+    }
+    historyEl.innerHTML = weeks.map((week, index) => `
+      <div class="history-card ${index === 0 ? 'current' : ''}">
+        <div class="history-top">
+          <strong>${week.week_start}</strong>
+          <span>${week.adherence_pct}%</span>
+        </div>
+        <p>${week.summary || 'Weekly plan snapshot'}</p>
+        <div class="history-meta">
+          <span>${week.source}</span>
+          <span>${(week.days || []).filter(day => day.completed).length}/${(week.days || []).length} done</span>
+        </div>
+      </div>
+    `).join('');
   }
 
   picker.addEventListener('change', () => {
