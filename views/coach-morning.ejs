@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personal Health — Coach Morning</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/public/css/dashboard.css">
+  <script src="/config.js"></script>
+  <style>
+    /* Flow 12 — glanceable coach triage. Dark anchor, cyan accent only. */
+    .morning-wrap { max-width: 720px; margin: 0 auto; padding: 48px 24px; }
+    .morning-head { margin-bottom: 28px; }
+    .morning-greet { font-size: 14px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.8px; }
+    .morning-h1 { font-size: 42px; font-weight: 800; color: #f9fafb; margin: 6px 0 2px; line-height: 1.1; }
+    .morning-sub { font-size: 18px; color: #9ca3af; }
+    .morning-h1 .cyan { color: #06b6d4; }
+
+    .priority-list { display: flex; flex-direction: column; gap: 14px; margin-top: 36px; }
+    .priority-card {
+      background: #111827; border: 1px solid #1f2937; border-radius: 14px;
+      padding: 22px 24px; display: flex; gap: 18px; align-items: flex-start;
+      text-decoration: none; color: inherit;
+      transition: border-color 0.15s ease, transform 0.15s ease;
+    }
+    .priority-card:hover { border-color: #06b6d4; transform: translateY(-1px); }
+    .priority-urgency {
+      flex: 0 0 12px; height: 12px; border-radius: 6px; margin-top: 8px;
+      background: #374151;
+    }
+    .priority-urgency.u-high { background: #f59e0b; }
+    .priority-urgency.u-med  { background: #06b6d4; }
+    .priority-urgency.u-low  { background: #10b981; }
+
+    .priority-body { flex: 1; }
+    .priority-name { font-size: 22px; font-weight: 700; color: #f9fafb; margin-bottom: 4px; }
+    .priority-reason { font-size: 16px; color: #d1d5db; line-height: 1.45; }
+    .priority-chip {
+      display: inline-block; font-size: 11px; text-transform: uppercase;
+      letter-spacing: 0.5px; color: #9ca3af; margin-top: 10px;
+      padding: 2px 8px; border: 1px solid #1f2937; border-radius: 999px;
+    }
+
+    .empty-state {
+      text-align: center; padding: 64px 16px; color: #9ca3af;
+      background: #111827; border: 1px dashed #1f2937; border-radius: 14px; margin-top: 36px;
+    }
+    .empty-state .emoji { font-size: 36px; margin-bottom: 10px; }
+    .empty-state .lead { font-size: 18px; color: #f9fafb; margin-bottom: 4px; }
+
+    .morning-foot {
+      margin-top: 36px; font-size: 12px; color: #6b7280;
+      display: flex; justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">
+      <span class="logo-mark">PH</span>
+      <span class="logo-name">Personal Health</span>
+    </div>
+    <nav class="nav">
+      <a class="nav-item" href="/">Overview</a>
+      <a class="nav-item" href="/dashboard">Dashboard</a>
+      <a class="nav-item" href="/plan">Training Plan</a>
+      <a class="nav-item" href="/huddle">Huddle</a>
+      <a class="nav-item" href="/wellness">Wellness</a>
+      <a class="nav-item" href="/map">Map</a>
+    </nav>
+    <div class="sidebar-status">
+      <span class="dot <%= backendOnline ? 'green' : 'red' %>"></span>
+      <span><%= backendOnline ? 'Backend online' : 'Backend offline' %></span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="morning-wrap">
+      <div class="morning-head">
+        <div class="morning-greet" id="greet">good morning</div>
+        <h1 class="morning-h1"><span class="cyan" id="count">—</span> <span id="count-label">to talk to today</span></h1>
+        <div class="morning-sub" id="sub">Roster of <%= coachId %></div>
+      </div>
+
+      <div class="priority-list" id="list"></div>
+
+      <div class="morning-foot">
+        <span id="roster-size"></span>
+        <span id="ts"></span>
+      </div>
+    </div>
+  </main>
+
+<script>
+(function(){
+  const API = (window.AB_CONFIG && window.AB_CONFIG.API_BASE) || '/api';
+  const coachId = <%- JSON.stringify(coachId) %>;
+
+  const _escEl = document.createElement('div');
+  function esc(s) { _escEl.textContent = s == null ? '' : String(s); return _escEl.innerHTML; }
+
+  function urgencyBand(u) {
+    if (u >= 80) return 'u-high';
+    if (u >= 50) return 'u-med';
+    return 'u-low';
+  }
+
+  function urgencyChip(code) {
+    const map = {
+      injury_risk_high: 'Injury risk',
+      form_decay: 'Form drop',
+      idle: 'Hasn\'t trained',
+      personal_best: 'PB — recognize',
+    };
+    return map[code] || code;
+  }
+
+  function greet() {
+    const h = new Date().getHours();
+    if (h < 12) return 'good morning';
+    if (h < 17) return 'good afternoon';
+    return 'good evening';
+  }
+
+  function render(data) {
+    document.getElementById('greet').textContent = greet();
+
+    const list = document.getElementById('list');
+    const priorities = data.priorities || [];
+
+    document.getElementById('count').textContent = priorities.length;
+    document.getElementById('count-label').textContent =
+      priorities.length === 1 ? 'to talk to today' : priorities.length === 0 ? 'to chase today' : 'to talk to today';
+    document.getElementById('roster-size').textContent =
+      'Roster size: ' + (data.roster_size || 0);
+    document.getElementById('ts').textContent =
+      'Updated ' + new Date(data.generated_at || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+    if (!priorities.length) {
+      list.innerHTML = '<div class="empty-state"><div class="emoji">—</div>' +
+        '<div class="lead">Nothing urgent today.</div>' +
+        '<div>Your athletes are training on plan. Use this time for a walk.</div></div>';
+      return;
+    }
+
+    list.innerHTML = priorities.map(p => `
+      <a class="priority-card" href="/athlete/${esc(p.athlete_id)}">
+        <div class="priority-urgency ${urgencyBand(p.urgency)}"></div>
+        <div class="priority-body">
+          <div class="priority-name">${esc(p.name)}</div>
+          <div class="priority-reason">${esc(p.reason)}</div>
+          <span class="priority-chip">${esc(urgencyChip(p.reason_code))}</span>
+        </div>
+      </a>
+    `).join('');
+  }
+
+  function renderError(msg) {
+    document.getElementById('list').innerHTML =
+      '<div class="empty-state"><div class="lead">Could not load priorities</div>' +
+      '<div>' + esc(msg) + '</div></div>';
+  }
+
+  fetch(API + '/coach/' + encodeURIComponent(coachId) + '/priorities')
+    .then(r => r.ok ? r.json() : r.json().then(j => { throw new Error(j.detail || 'error'); }))
+    .then(render)
+    .catch(e => renderError(e.message || 'backend offline'));
+})();
+</script>
+</body>
+</html>
