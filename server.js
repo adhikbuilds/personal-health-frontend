@@ -38,6 +38,8 @@ async function fetchBackendData(route, fallback = null) {
 
 const app = express();
 app.use(express.json());
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'ejs');
 
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -110,6 +112,69 @@ app.use('/', createProxyMiddleware({
 if (fs.existsSync(DIST_DIR)) {
   app.use(express.static(DIST_DIR, { index: false }));
 }
+
+// ── Coach inbox (broadcasts + 1:1 messages) ───────────────────────────────
+app.get('/coach/:coachId/inbox', async (req, res) => {
+  const { coachId } = req.params;
+  const health = await fetchBackendData('/health', null);
+  res.render('coach-inbox', { coachId, backendOnline: !!health });
+});
+
+// ── Coach billing dashboard ────────────────────────────────────────────────
+app.get('/coach/:coachId/billing', async (req, res) => {
+  const { coachId } = req.params;
+  const health = await fetchBackendData('/health', null);
+  res.render('coach-billing', { coachId, backendOnline: !!health });
+});
+
+// ── Athlete inbox (messages + drills + payment banner) ─────────────────────
+app.get('/athlete/:athleteId/inbox', async (req, res) => {
+  const { athleteId } = req.params;
+  const health = await fetchBackendData('/health', null);
+  res.render('athlete-inbox', { athleteId, backendOnline: !!health });
+});
+
+// ── Parent weekly digest (token-based, no login) ───────────────────────────
+app.get('/digest/:token', async (req, res) => {
+  const { token } = req.params;
+  const data = await fetchBackendData(`/parent/${encodeURIComponent(token)}/weekly-digest`, null);
+  if (!data) {
+    return res.status(403).render('parent-digest', {
+      digest: null,
+      error: 'Link not found or expired. Ask your athlete to share a fresh link.',
+    });
+  }
+  return res.render('parent-digest', { digest: data, error: null });
+});
+
+// ── Parent safety summary page ─────────────────────────────────────────────
+// Fetches safety data from the backend using the parent's token, then renders
+// a read-only, privacy-respecting view. No raw scores or session IDs exposed.
+app.get('/parent/:consentId', async (req, res) => {
+  const { consentId } = req.params;
+  const { token } = req.query;
+
+  if (!token) {
+    return res.status(400).render('parent', {
+      summary: null,
+      error: 'Missing access token. Use the link provided by the athlete.',
+    });
+  }
+
+  const data = await fetchBackendData(
+    `/parent/${encodeURIComponent(consentId)}/safety-summary?token=${encodeURIComponent(token)}`,
+    null,
+  );
+
+  if (!data) {
+    return res.status(403).render('parent', {
+      summary: null,
+      error: 'Access denied or link expired. The athlete may have revoked access.',
+    });
+  }
+
+  return res.render('parent', { summary: data, error: null });
+});
 
 app.get('*', (req, res) => {
   if (fs.existsSync(INDEX_FILE)) {
