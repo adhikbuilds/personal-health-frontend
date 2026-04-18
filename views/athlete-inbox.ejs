@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personal Health — Athlete Inbox</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/public/css/dashboard.css">
+  <script src="/config.js"></script>
+  <style>
+    .wrap { max-width: 680px; margin: 0 auto; }
+
+    /* ── Payment banner ── */
+    .payment-banner {
+      display: none;
+      background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 10px; padding: 14px 18px; margin-bottom: 20px;
+      display: flex; align-items: center; gap: 14px;
+    }
+    .payment-banner .banner-icon { font-size: 20px; flex-shrink: 0; }
+    .payment-banner .banner-text { flex: 1; font-size: 14px; color: #fca5a5; }
+    .payment-banner .banner-text strong { color: #f9fafb; }
+    .payment-banner .btn-pay { background: #ef4444; color: #fff; font-size: 13px; }
+
+    /* ── Drill card ── */
+    .drill-card {
+      background: rgba(6,182,212,0.05); border: 1px solid rgba(6,182,212,0.18);
+      border-radius: 10px; padding: 16px 20px; margin-bottom: 16px;
+      display: flex; align-items: center; gap: 14px;
+    }
+    .drill-icon { font-size: 22px; flex-shrink: 0; }
+    .drill-body { flex: 1; }
+    .drill-name { font-size: 15px; font-weight: 700; color: var(--text); }
+    .drill-desc { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .drill-date { font-size: 11px; color: var(--accent); margin-top: 4px; }
+    .btn-start { flex-shrink: 0; }
+
+    /* ── Message cards ── */
+    .msg-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 18px 20px; margin-bottom: 12px;
+    }
+    .msg-card.unread { border-color: rgba(6,182,212,0.3); }
+    .msg-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .msg-coach { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .msg-time  { font-size: 11px; color: var(--muted); }
+    .msg-text  { font-size: 15px; color: var(--text); line-height: 1.55; }
+
+    .voice-player {
+      display: flex; align-items: center; gap: 10px; margin-top: 10px;
+      background: rgba(6,182,212,0.07); border: 1px solid rgba(6,182,212,0.18);
+      border-radius: 8px; padding: 10px 14px;
+    }
+    .voice-player button {
+      width: 30px; height: 30px; border-radius: 50%; border: none;
+      background: var(--accent); color: #000; font-size: 13px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .voice-label { font-size: 13px; color: var(--muted); }
+
+    .reply-form { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+    .reply-form.done .reply-input-row { display: none; }
+    .reply-form.done .reply-sent { display: block; font-size: 13px; color: #22c55e; }
+    .reply-sent { display: none; }
+    .reply-input-row { display: flex; gap: 8px; }
+    .reply-input-row input {
+      flex: 1; background: #1a2235; border: 1px solid var(--border); color: var(--text);
+      border-radius: 7px; padding: 8px 12px; font-size: 13px; outline: none;
+      font-family: 'Inter', sans-serif;
+    }
+    .btn-reply { flex-shrink: 0; font-size: 12px; padding: 7px 14px; }
+
+    .section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin: 22px 0 10px; }
+
+    .empty { text-align: center; padding: 32px; color: var(--muted); font-size: 13px;
+             background: var(--surface); border: 1px dashed var(--border); border-radius: 10px; }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">
+      <span class="logo-mark">PH</span>
+      <span class="logo-name">Personal Health</span>
+    </div>
+    <nav class="nav">
+      <a class="nav-item" href="/">Overview</a>
+      <a class="nav-item" href="/session">Train</a>
+      <a class="nav-item active" href="/athlete/<%= athleteId %>/inbox">Inbox</a>
+      <a class="nav-item" href="/wellness">Wellness</a>
+    </nav>
+    <div class="sidebar-status">
+      <span class="dot <%= backendOnline ? 'green' : 'red' %>"></span>
+      <span><%= backendOnline ? 'Backend online' : 'Backend offline' %></span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="wrap">
+      <div class="page-header">
+        <div>
+          <h1>Inbox</h1>
+          <div class="sub">Messages from your coach</div>
+        </div>
+      </div>
+
+      <!-- Payment banner (shown only if payment is due) -->
+      <div id="payment-banner" style="display:none;" class="payment-banner">
+        <div class="banner-icon">!</div>
+        <div class="banner-text">
+          <strong>Payment due</strong> — complete your monthly coaching fee to continue training.
+        </div>
+        <a id="payment-url" href="#" target="_blank" class="btn btn-pay">Pay now</a>
+      </div>
+
+      <!-- Tomorrow's drill -->
+      <div class="section-title">Drill assigned by coach</div>
+      <div id="drill-section"><div class="empty">No drills assigned yet.</div></div>
+
+      <!-- Coach broadcasts -->
+      <div class="section-title">Messages from coach</div>
+      <div id="msg-list"><div class="empty">Loading...</div></div>
+    </div>
+  </main>
+
+<script>
+(function(){
+  const API = (window.AB_CONFIG && window.AB_CONFIG.API_BASE) || '/api';
+  const athleteId = <%- JSON.stringify(athleteId) %>;
+
+  const _el = document.createElement('div');
+  function esc(s){ _el.textContent = s==null?'':String(s); return _el.innerHTML; }
+  function relTime(iso){
+    if(!iso) return '';
+    const d = new Date(iso), now = Date.now();
+    const mins = Math.floor((now - d)/60000);
+    if(mins < 1) return 'just now';
+    if(mins < 60) return mins + 'm ago';
+    if(mins < 1440) return Math.floor(mins/60) + 'h ago';
+    return d.toLocaleDateString();
+  }
+
+  // ── Payment status ──
+  fetch(API+'/billing/athlete/'+encodeURIComponent(athleteId))
+    .then(r=>r.ok?r.json():null).then(data=>{
+      if(!data || data.status === 'no_subscription') return;
+      if(data.paused || data.status === 'pending'){
+        const banner = document.getElementById('payment-banner');
+        banner.style.display = 'flex';
+        if(data.payment_url){
+          document.getElementById('payment-url').href = data.payment_url;
+        }
+      }
+    }).catch(()=>{});
+
+  // ── Drill assignments ──
+  fetch(API+'/athlete/'+encodeURIComponent(athleteId)+'/drill-assignments')
+    .then(r=>r.ok?r.json():null).then(data=>{
+      const el = document.getElementById('drill-section');
+      const items = (data&&data.assignments)||[];
+      if(!items.length){ el.innerHTML='<div class="empty">No drills assigned yet.</div>'; return; }
+      el.innerHTML = items.slice(0,3).map(d=>
+        `<div class="drill-card">
+          <div class="drill-icon">&#9654;</div>
+          <div class="drill-body">
+            <div class="drill-name">${esc(d.drill_name)}</div>
+            ${d.drill_description?`<div class="drill-desc">${esc(d.drill_description)}</div>`:''}
+            <div class="drill-date">Scheduled for ${esc(d.scheduled_for)}</div>
+          </div>
+          <a href="/session?drill=${encodeURIComponent(d.drill_name)}" class="btn btn-start">Start</a>
+        </div>`).join('');
+    }).catch(()=>{});
+
+  // ── Broadcasts ──
+  let _audioEls = {};
+  fetch(API+'/athlete/'+encodeURIComponent(athleteId)+'/inbox')
+    .then(r=>r.ok?r.json():Promise.reject())
+    .then(data=>{
+      const el = document.getElementById('msg-list');
+      const bcs = (data&&data.broadcasts)||[];
+      if(!bcs.length){ el.innerHTML='<div class="empty">No messages from your coach yet.</div>'; return; }
+      el.innerHTML = bcs.map((bc,i)=>{
+        const voiceHtml = bc.voice_note_url
+          ? `<div class="voice-player">
+              <button onclick="toggleAudio(${i},this)">&#9654;</button>
+              <span class="voice-label">Voice note from coach</span>
+              <audio id="va-${i}" src="${esc(API+bc.voice_note_url)}" preload="none"></audio>
+             </div>` : '';
+        const replied = bc.replied;
+        const replyHtml = `
+          <div class="reply-form${replied?' done':''}" id="rf-${i}">
+            <div class="reply-sent">Reply sent</div>
+            <div class="reply-input-row">
+              <input type="text" id="ri-${i}" placeholder="Reply to coach...">
+              <button class="btn btn-reply" onclick="sendReply('${esc(bc.broadcast_id)}',${i})">Send</button>
+            </div>
+          </div>`;
+        return `<div class="msg-card${bc.replied?'':' unread'}">
+          <div class="msg-head">
+            <span class="msg-coach">Coach</span>
+            <span class="msg-time">${relTime(bc.sent_at)}</span>
+          </div>
+          ${bc.message?`<div class="msg-text">${esc(bc.message)}</div>`:''}
+          ${voiceHtml}
+          ${replyHtml}
+        </div>`;
+      }).join('');
+    })
+    .catch(()=>{
+      document.getElementById('msg-list').innerHTML='<div class="empty">Could not load messages.</div>';
+    });
+
+  window.toggleAudio = function(i, btn){
+    const audio = document.getElementById('va-'+i);
+    if(audio.paused){ audio.play(); btn.innerHTML='&#9646;&#9646;'; }
+    else { audio.pause(); btn.innerHTML='&#9654;'; }
+    audio.onended = ()=>{ btn.innerHTML='&#9654;'; };
+  };
+
+  window.sendReply = function(broadcastId, i){
+    const text = document.getElementById('ri-'+i).value.trim();
+    if(!text) return;
+    fetch(API+'/athlete/'+encodeURIComponent(athleteId)+'/reply', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({broadcast_id: broadcastId, message: text})
+    })
+    .then(r=>r.ok?r.json():Promise.reject())
+    .then(()=>{
+      const rf = document.getElementById('rf-'+i);
+      rf.classList.add('done');
+    })
+    .catch(()=>alert('Could not send reply.'));
+  };
+})();
+</script>
+</body>
+</html>

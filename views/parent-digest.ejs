@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personal Health — Weekly Update</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif; background: #0a0e1a; color: #f1f5f9;
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 24px 16px;
+    }
+    .card {
+      background: #111827; border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px; padding: 36px 32px; width: 100%; max-width: 420px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    }
+    .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
+    .logo-mark {
+      width: 30px; height: 30px; border-radius: 8px; background: #06b6d4; color: #000;
+      font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+      letter-spacing: 0.5px;
+    }
+    .logo-name { font-size: 14px; font-weight: 700; }
+
+    .headline { font-size: 24px; font-weight: 800; line-height: 1.2; margin-bottom: 6px; }
+    .headline.safe   { color: #22c55e; }
+    .headline.watch  { color: #f59e0b; }
+    .headline.high   { color: #ef4444; }
+
+    .subline { font-size: 14px; color: #9ca3af; margin-bottom: 28px; line-height: 1.5; }
+
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px; }
+    .stat {
+      background: rgba(255,255,255,0.04); border-radius: 10px; padding: 14px 16px;
+    }
+    .stat-val { font-size: 22px; font-weight: 800; color: #f9fafb; }
+    .stat-val.cyan { color: #06b6d4; }
+    .stat-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #64748b; margin-top: 3px; }
+
+    .safety-box {
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 10px; padding: 16px; font-size: 14px; color: #e2e8f0; line-height: 1.65;
+      margin-bottom: 24px;
+    }
+
+    .footer { font-size: 12px; color: #374151; text-align: center; line-height: 1.6; }
+    .footer a { color: #06b6d4; text-decoration: none; }
+
+    /* ── Error state ── */
+    .error-state { text-align: center; padding: 40px 0; }
+    .error-icon  { font-size: 36px; margin-bottom: 14px; }
+    .error-state h2 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .error-state p  { font-size: 14px; color: #9ca3af; }
+  </style>
+</head>
+<body>
+<div class="card">
+
+  <div class="logo">
+    <span class="logo-mark">PH</span>
+    <span class="logo-name">Personal Health</span>
+  </div>
+
+  <% if (error) { %>
+
+    <div class="error-state">
+      <div class="error-icon">&#128274;</div>
+      <h2>Link unavailable</h2>
+      <p><%= error %></p>
+    </div>
+
+  <% } else { %>
+
+    <%
+      const risk = digest.injury_risk || 'unknown';
+      const headlineClass = risk === 'low' ? 'safe' : risk === 'high' ? 'high' : 'watch';
+      const headlineText  = risk === 'low'
+        ? 'Training safely this week'
+        : risk === 'high'
+        ? 'Coach is monitoring closely'
+        : 'Active week — all good';
+      const sessions = digest.sessions_this_week || 0;
+      const avgForm  = digest.avg_form_score != null ? digest.avg_form_score + ' / 100' : '—';
+      const mins     = digest.total_training_minutes || 0;
+      const reps     = digest.total_reps || 0;
+    %>
+
+    <h1 class="headline <%= headlineClass %>"><%= headlineText %></h1>
+    <p class="subline">
+      Weekly update for <strong><%= digest.athlete_name || 'your athlete' %></strong>
+      &middot; <%= (digest.sport || 'sport not set').replace(/_/g,' ') %>
+      &middot; week ending <%= digest.week_ending || '' %>
+    </p>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-val cyan"><%= sessions %></div>
+        <div class="stat-lbl">Sessions this week</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val"><%= avgForm %></div>
+        <div class="stat-lbl">Avg form score</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val"><%= mins %> min</div>
+        <div class="stat-lbl">Training time</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val"><%= reps || '—' %></div>
+        <div class="stat-lbl">Total reps</div>
+      </div>
+    </div>
+
+    <div class="safety-box"><%= digest.safety_note %></div>
+
+    <p class="footer">
+      This view shows only safety-relevant signals.<br>
+      Detailed scores are private to the athlete and their coach.<br><br>
+      Powered by <a href="https://personalhealth.app">Personal Health</a>
+    </p>
+
+  <% } %>
+
+</div>
+</body>
+</html>
