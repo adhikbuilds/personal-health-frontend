@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personal Health — Billing</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/public/css/dashboard.css">
+  <script src="/config.js"></script>
+  <style>
+    .wrap { max-width: 800px; margin: 0 auto; }
+
+    .summary-row { display: flex; gap: 12px; margin-bottom: 28px; flex-wrap: wrap; }
+    .summary-stat {
+      flex: 1; min-width: 120px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 16px 18px;
+    }
+    .summary-stat .val { font-size: 28px; font-weight: 800; color: var(--text); }
+    .summary-stat .val.green { color: #22c55e; }
+    .summary-stat .val.red   { color: #ef4444; }
+    .summary-stat .val.amber { color: #f59e0b; }
+    .summary-stat .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-top: 4px; }
+
+    .section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin: 20px 0 10px; }
+
+    .athlete-row {
+      display: flex; align-items: center; gap: 14px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 18px; margin-bottom: 8px;
+    }
+    .athlete-avatar {
+      width: 34px; height: 34px; border-radius: 50%; background: rgba(6,182,212,0.12);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: var(--accent); flex-shrink: 0;
+    }
+    .athlete-name { font-size: 14px; font-weight: 600; color: var(--text); }
+    .athlete-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .athlete-amount { margin-left: auto; font-size: 15px; font-weight: 700; color: var(--text); }
+    .badge {
+      font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px;
+      display: inline-block; margin-left: 8px;
+    }
+    .badge.paid    { background: rgba(34,197,94,0.15); color: #22c55e; }
+    .badge.overdue { background: rgba(239,68,68,0.15);  color: #ef4444; }
+    .badge.paused  { background: rgba(245,158,11,0.15); color: #f59e0b; }
+
+    .row-actions { display: flex; gap: 6px; margin-left: 12px; }
+    .btn-sm { padding: 5px 10px; font-size: 11px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; }
+    .btn-chase { background: rgba(239,68,68,0.12); color: #ef4444; }
+    .btn-override { background: rgba(6,182,212,0.12); color: var(--accent); }
+
+    .invite-box {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 18px 20px; margin-top: 24px;
+    }
+    .invite-box h3 { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+    .invite-row { display: flex; gap: 8px; }
+    .invite-row input {
+      flex: 1; background: #1a2235; border: 1px solid var(--border); color: var(--text);
+      border-radius: 7px; padding: 8px 12px; font-size: 13px; outline: none;
+    }
+
+    .empty { text-align: center; padding: 28px; color: var(--muted); font-size: 13px;
+             background: var(--surface); border: 1px dashed var(--border); border-radius: 10px; }
+
+    .toast {
+      position: fixed; bottom: 20px; right: 20px; background: #22c55e; color: #000;
+      padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+      display: none; z-index: 200;
+    }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">
+      <span class="logo-mark">PH</span>
+      <span class="logo-name">Personal Health</span>
+    </div>
+    <nav class="nav">
+      <a class="nav-item" href="/">Overview</a>
+      <a class="nav-item" href="/dashboard">Dashboard</a>
+      <a class="nav-item" href="/coach/<%= coachId %>/morning">Morning</a>
+      <a class="nav-item" href="/coach/<%= coachId %>/inbox">Inbox</a>
+      <a class="nav-item active" href="/coach/<%= coachId %>/billing">Billing</a>
+      <a class="nav-item" href="/huddle">Huddle</a>
+    </nav>
+    <div class="sidebar-status">
+      <span class="dot <%= backendOnline ? 'green' : 'red' %>"></span>
+      <span><%= backendOnline ? 'Backend online' : 'Backend offline' %></span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="wrap">
+      <div class="page-header">
+        <div>
+          <h1>Billing</h1>
+          <div class="sub">Monthly subscriptions &amp; payments</div>
+        </div>
+      </div>
+
+      <!-- Summary stats -->
+      <div class="summary-row" id="summary-row">
+        <div class="summary-stat"><div class="val" id="s-total">—</div><div class="lbl">Athletes</div></div>
+        <div class="summary-stat"><div class="val green" id="s-paid">—</div><div class="lbl">Paid</div></div>
+        <div class="summary-stat"><div class="val red" id="s-overdue">—</div><div class="lbl">Overdue</div></div>
+        <div class="summary-stat"><div class="val amber" id="s-paused">—</div><div class="lbl">Paused</div></div>
+      </div>
+
+      <!-- Overdue -->
+      <div class="section-title">Overdue</div>
+      <div id="list-overdue"><div class="empty">Loading...</div></div>
+
+      <!-- Paused -->
+      <div class="section-title">Access Paused</div>
+      <div id="list-paused"><div class="empty">Loading...</div></div>
+
+      <!-- Paid -->
+      <div class="section-title">Paid this month</div>
+      <div id="list-paid"><div class="empty">Loading...</div></div>
+
+      <!-- Invite link generator -->
+      <div class="invite-box">
+        <h3>Invite an athlete via WhatsApp</h3>
+        <div class="invite-row">
+          <input type="text" id="invite-label" placeholder="Label (e.g. April sprint group)">
+          <button class="btn" onclick="generateInvite()">Generate link</button>
+        </div>
+        <div id="invite-result" style="margin-top:10px;font-size:13px;color:var(--muted);"></div>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const API = (window.AB_CONFIG && window.AB_CONFIG.API_BASE) || '/api';
+  const coachId = <%- JSON.stringify(coachId) %>;
+
+  const _el = document.createElement('div');
+  function esc(s){ _el.textContent = s==null?'':String(s); return _el.innerHTML; }
+
+  function toast(msg, color='#22c55e'){
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.style.background = color; t.style.display = 'block';
+    setTimeout(()=>{ t.style.display='none'; }, 2800);
+  }
+
+  function avatarInitial(name){ return (name||'?')[0].toUpperCase(); }
+
+  function athleteRowHtml(a, badge, actions){
+    return `<div class="athlete-row">
+      <div class="athlete-avatar">${esc(avatarInitial(a.athlete_name))}</div>
+      <div>
+        <div class="athlete-name">${esc(a.athlete_name||a.athlete_id)}</div>
+        <div class="athlete-meta">Due ${esc(a.due_date||'—')}</div>
+      </div>
+      <div class="athlete-amount">₹${esc(a.amount_inr||'—')}<span class="badge ${badge}">${badge}</span></div>
+      <div class="row-actions">${actions}</div>
+    </div>`;
+  }
+
+  function load(){
+    fetch(API+'/billing/coach/'+encodeURIComponent(coachId))
+      .then(r=>r.ok?r.json():Promise.reject())
+      .then(data=>{
+        const s = data.summary||{};
+        document.getElementById('s-total').textContent   = s.total   ?? 0;
+        document.getElementById('s-paid').textContent    = s.paid    ?? 0;
+        document.getElementById('s-overdue').textContent = s.overdue ?? 0;
+        document.getElementById('s-paused').textContent  = s.paused  ?? 0;
+
+        renderList('list-overdue', data.overdue||[], a =>
+          athleteRowHtml(a,'overdue',
+            `<button class="btn-sm btn-chase" onclick="chaseWhatsApp('${esc(a.athlete_id)}','${esc(a.athlete_name)}',${a.amount_inr},'${esc(a.payment_url||'')}')">Chase</button>
+             <button class="btn-sm btn-override" onclick="override('${esc(a.athlete_id)}')">Mark paid</button>`));
+
+        renderList('list-paused', data.paused||[], a =>
+          athleteRowHtml(a,'paused',
+            `<button class="btn-sm btn-override" onclick="override('${esc(a.athlete_id)}')">Lift pause</button>`));
+
+        renderList('list-paid', data.paid||[], a =>
+          athleteRowHtml(a,'paid',''));
+      })
+      .catch(()=>{
+        ['list-overdue','list-paused','list-paid'].forEach(id=>{
+          document.getElementById(id).innerHTML='<div class="empty">Could not load billing data.</div>';
+        });
+      });
+  }
+
+  function renderList(id, items, rowFn){
+    const el = document.getElementById(id);
+    if(!items.length){ el.innerHTML='<div class="empty">None</div>'; return; }
+    el.innerHTML = items.map(rowFn).join('');
+  }
+
+  window.chaseWhatsApp = function(athleteId, name, amount, payUrl){
+    const msg = encodeURIComponent(
+      `Hi ${name}, your ₹${amount} coaching fee is overdue.\nPay here: ${payUrl}`
+    );
+    window.open('https://wa.me/?text='+msg, '_blank');
+  };
+
+  window.override = function(athleteId){
+    fetch(API+'/billing/override/'+encodeURIComponent(athleteId)+'?coach_id='+encodeURIComponent(coachId), {method:'POST'})
+      .then(r=>r.ok?r.json():Promise.reject())
+      .then(()=>{ toast('Access restored'); load(); })
+      .catch(()=>toast('Failed','#ef4444'));
+  };
+
+  window.generateInvite = function(){
+    const label = document.getElementById('invite-label').value.trim();
+    fetch(API+'/coach/'+encodeURIComponent(coachId)+'/invite-link', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({label: label||null, max_uses:20, ttl_hours:72})
+    })
+    .then(r=>r.ok?r.json():Promise.reject())
+    .then(data=>{
+      const el = document.getElementById('invite-result');
+      const waUrl = 'https://wa.me/?text='+encodeURIComponent(data.whatsapp_share_text||data.invite_url);
+      el.innerHTML = `<a href="${esc(waUrl)}" target="_blank" style="color:var(--accent);">Share via WhatsApp</a>
+        &nbsp;&nbsp;<span style="color:var(--muted);">${esc(data.invite_url)}</span>`;
+    })
+    .catch(()=>toast('Could not generate invite','#ef4444'));
+  };
+
+  load();
+})();
+</script>
+</body>
+</html>
