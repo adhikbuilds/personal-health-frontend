@@ -203,6 +203,17 @@ app.get('/session/:id', async (req, res) => {
     });
 });
 
+// Coach Morning Triage — Flow 12 from BIOMECHANICS-ARCHITECT.md
+// "who do I need to talk to today?" — max 3-5 athletes, one sentence each.
+app.get('/coach/:id/morning', async (req, res) => {
+    const health = await fetchBackendData('/health', { status: 'offline' });
+    res.render('coach-morning', {
+        config: buildConfig(),
+        backendOnline: health?.status === 'ok',
+        coachId: req.params.id,
+    });
+});
+
 // ── API Routes ──────────────────────────────────────────────────────────────
 
 // Convenience status endpoint for the frontend itself
