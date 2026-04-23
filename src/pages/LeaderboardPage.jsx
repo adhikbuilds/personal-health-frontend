@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
 import { api, safeQuery } from '../lib/api'
 import { getCurrentAthleteId } from '../lib/auth'
 import {
@@ -230,8 +231,9 @@ function LbRow({ row, top, self }) {
   const bpi = row.bpi || 0
   const topBpi = Math.max(1, top?.bpi || bpi)
   const fill = Math.min(100, Math.max(6, (bpi / topBpi) * 100))
-  return (
-    <div className={`rank-row ${self ? 'rank-self' : ''}`}>
+  const aid = row.id || row.athlete_id
+  const inner = (
+    <>
       <div className="rank-copy">
         <strong>
           {medal(row.rank)} {row.rank}. {row.name || row.id || 'Unknown'}
@@ -246,7 +248,19 @@ function LbRow({ row, top, self }) {
         <em>{bpi} BPI</em>
         <ProgressBar value={fill} />
       </div>
-    </div>
+    </>
+  )
+  if (!aid) {
+    return <div className={`rank-row ${self ? 'rank-self' : ''}`}>{inner}</div>
+  }
+  return (
+    <Link
+      to="/athlete/$athleteId"
+      params={{ athleteId: aid }}
+      className={`rank-row rank-link ${self ? 'rank-self' : ''}`}
+    >
+      {inner}
+    </Link>
   )
 }
 

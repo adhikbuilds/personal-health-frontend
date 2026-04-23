@@ -123,19 +123,27 @@ export function CommunityPage() {
 function FeedRow({ item }) {
   const [clapped, setClapped] = useState(false)
   const [serverCount, setServerCount] = useState(null)
+  const [err, setErr] = useState(null)
   const viewerId = getCurrentAthleteId()
   const targetId = item.target_id || item.session_id || item.athlete_id
+  // Use the real api.post (throws on error) so the mutation sees onError
+  // when the server rejects (401, 403, 500). The previous safeQuery
+  // wrapper swallowed errors and the button silently lied to the user.
   const clapMut = useMutation({
     mutationFn: () =>
-      safeQuery(
-        () =>
-          api.post(
-            `/athlete/${encodeURIComponent(viewerId)}/clap/${encodeURIComponent(targetId)}`,
-          ),
-        null,
+      api.post(
+        `/athlete/${encodeURIComponent(viewerId)}/clap/${encodeURIComponent(targetId)}`,
       ),
     onSuccess: (data) => {
       if (data && typeof data.count === 'number') setServerCount(data.count)
+    },
+    onError: (e) => {
+      // Roll back optimistic state and surface the failure inline.
+      setClapped(false)
+      setServerCount(null)
+      setErr(e?.message || 'Clap failed')
+      // Auto-clear after 3s so the row UI doesn't stay stuck on red
+      setTimeout(() => setErr(null), 3000)
     },
   })
   const body = itemBody(item)
@@ -151,11 +159,14 @@ function FeedRow({ item }) {
       </div>
       <div className="feed-actions">
         {isPbItem(item) ? <Pill tone="success">PB</Pill> : null}
+        {err ? <Pill tone="warm">{err.length > 30 ? 'Clap failed' : err}</Pill> : null}
         <button
           type="button"
-          className={`clap-btn ${clapped ? 'clapped' : ''}`}
+          className={`clap-btn ${clapped ? 'clapped' : ''} ${err ? 'failed' : ''}`}
+          disabled={clapMut.isPending}
           onClick={() => {
-            if (clapped) return
+            if (clapped || clapMut.isPending) return
+            setErr(null)
             setClapped(true)
             clapMut.mutate()
           }}
