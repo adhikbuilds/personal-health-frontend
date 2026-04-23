@@ -24,14 +24,11 @@ import {
  *    raw "X started a session" events are not.
  *
  * Backend endpoints used:
- *  - GET /feed              → recent activity (PBs, achievements, broadcasts)
- *  - GET /creators/trending → coaches who had the most PBs on their roster
- *  - POST /follow           → follow a coach / athlete (placeholder)
- *
- * Known backend gaps (flagged, not built here):
- *  - POST /athlete/{id}/clap/{target_id}  — reaction endpoint does not exist yet
- *  - POST /coach/{id}/broadcast           — trainer broadcast does not exist yet
- * These are stubbed on the client with optimistic-only UI + a TODO banner.
+ *  - GET  /feed                            → recent activity (PBs, achievements)
+ *  - GET  /creators/trending               → coaches with the most PBs on their roster
+ *  - POST /follow                          → follow a coach / athlete (placeholder)
+ *  - POST /athlete/{id}/clap/{target_id}   → idempotent one-tap reaction (live)
+ *  - POST /coach/{id}/broadcast            → trainer broadcast (see ComposePage)
  */
 export function CommunityPage() {
   const feedQuery = useQuery({
@@ -124,14 +121,23 @@ export function CommunityPage() {
 
 function FeedRow({ item }) {
   const [clapped, setClapped] = useState(false)
+  const [serverCount, setServerCount] = useState(null)
+  const viewerId =
+    (typeof localStorage !== 'undefined' && localStorage.getItem('ph_viewer_id')) ||
+    'athlete_01'
+  const targetId = item.target_id || item.session_id || item.athlete_id
   const clapMut = useMutation({
     mutationFn: () =>
-      // Stub: backend endpoint does not exist yet. Keep UI optimistic so the
-      // wiring lands the day the endpoint ships. Silently succeeds locally.
-      safeQuery(() => api.post(`/athlete/${item.athlete_id}/clap/${item.target_id || item.athlete_id}`), {
-        ok: false,
-        stubbed: true,
-      }),
+      safeQuery(
+        () =>
+          api.post(
+            `/athlete/${encodeURIComponent(viewerId)}/clap/${encodeURIComponent(targetId)}`,
+          ),
+        null,
+      ),
+    onSuccess: (data) => {
+      if (data && typeof data.count === 'number') setServerCount(data.count)
+    },
   })
   const body = itemBody(item)
 
@@ -157,7 +163,7 @@ function FeedRow({ item }) {
           aria-label={clapped ? 'Clapped' : 'Clap'}
         >
           <span className="clap-emoji">{clapped ? '✓' : '◎'}</span>
-          <em>{(item.claps || 0) + (clapped ? 1 : 0)}</em>
+          <em>{serverCount ?? (item.claps || 0) + (clapped ? 1 : 0)}</em>
         </button>
       </div>
     </div>
