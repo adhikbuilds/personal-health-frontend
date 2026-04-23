@@ -5,7 +5,8 @@ import { LoadingBlock, PageIntro, Panel, Pill, StatCard, StatGrid } from '../com
 export function SessionPage({ sessionId }) {
   const replayQuery = useQuery({
     queryKey: ['session-replay', sessionId],
-    queryFn: () => api.get(`/sessions/${sessionId}/replay?downsample=2`),
+    // safeQuery so 403/404 surfaces as null + empty state instead of crashing.
+    queryFn: () => safeQuery(() => api.get(`/sessions/${sessionId}/replay?downsample=2`), null),
   })
   const scorecardQuery = useQuery({
     queryKey: ['session-scorecard', sessionId],

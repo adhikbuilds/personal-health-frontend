@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, safeQuery } from '../lib/api'
+import { getCurrentAthleteId } from '../lib/auth'
+import { toast } from '../lib/toast'
 import {
   DataList,
   LoadingBlock,
@@ -40,7 +42,7 @@ import {
 export function InboxPage() {
   const qc = useQueryClient()
   const [athleteId, setAthleteId] = useState(
-    () => localStorage.getItem('ph_self_athlete_id') || 'athlete_01',
+    () => getCurrentAthleteId(),
   )
 
   const notifQuery = useQuery({

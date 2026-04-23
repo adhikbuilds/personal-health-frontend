@@ -21,7 +21,7 @@ export function PlanPage() {
   const planQuery = useQuery({
     queryKey: ['plan-weekly', athleteId],
     enabled: Boolean(athleteId),
-    queryFn: () => api.get(`/plan/${athleteId}/weekly`),
+    queryFn: () => safeQuery(() => api.get(`/plan/${athleteId}/weekly`), null),
   })
 
   const historyQuery = useQuery({
