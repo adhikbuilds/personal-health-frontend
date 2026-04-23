@@ -5,7 +5,10 @@ import { LoadingBlock, PageIntro, Panel, Pill, ProgressBar, StatCard, StatGrid }
 export function AthletePage({ athleteId }) {
   const reportQuery = useQuery({
     queryKey: ['athlete-report', athleteId],
-    queryFn: () => api.get(`/athlete/${athleteId}/intelligence-report?days=30`),
+    // safeQuery so a 403 (viewing a non-owned athlete after the
+    // ownership-gate work) surfaces as a clean empty state rather than
+    // an uncaught exception that breaks the whole page.
+    queryFn: () => safeQuery(() => api.get(`/athlete/${athleteId}/intelligence-report?days=30`), null),
   })
   const summaryQuery = useQuery({
     queryKey: ['athlete-weekly', athleteId],

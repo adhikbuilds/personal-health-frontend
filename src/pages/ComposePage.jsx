@@ -292,9 +292,8 @@ function VoiceRecorder({ maxMs, onUploaded, onError, currentUrl }) {
         try {
           const form = new FormData()
           form.append('file', blob, `voice-note.${(mr.mimeType || '').includes('mp4') ? 'm4a' : 'webm'}`)
-          const resp = await fetch(`${API_BASE}/voice-note/upload`, { method: 'POST', body: form })
-          if (!resp.ok) throw new Error(`upload failed: ${resp.status}`)
-          const json = await resp.json()
+          // Route through api.upload so the JWT is attached automatically.
+          const json = await api.upload('/voice-note/upload', form)
           onUploaded({ url: json.url || json.voice_url, duration_ms })
         } catch (e) {
           onError(e.message || 'upload failed')

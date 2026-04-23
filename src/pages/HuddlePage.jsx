@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, safeQuery } from '../lib/api'
+import { toast } from '../lib/toast'
 import { LoadingBlock, PageIntro, Panel, Pill, StatCard, StatGrid } from '../components/Primitives'
 
 export function HuddlePage() {
@@ -25,15 +26,27 @@ export function HuddlePage() {
 
   const createMutation = useMutation({
     mutationFn: () => api.post('/huddle/create', form),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['huddles'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['huddles'] })
+      toast.success(`Huddle "${form.name}" created.`)
+    },
+    onError: (e) => toast.error(`Couldn't create huddle: ${e?.message || 'unknown error'}`),
   })
   const startMutation = useMutation({
     mutationFn: (id) => api.post(`/huddle/${id}/start`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['huddles'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['huddles'] })
+      toast.success('Huddle started.')
+    },
+    onError: (e) => toast.error(`Couldn't start huddle: ${e?.message || 'unknown error'}`),
   })
   const endMutation = useMutation({
     mutationFn: (id) => api.post(`/huddle/${id}/end`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['huddles'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['huddles'] })
+      toast.success('Huddle ended.')
+    },
+    onError: (e) => toast.error(`Couldn't end huddle: ${e?.message || 'unknown error'}`),
   })
 
   const allHuddles = huddlesQuery.data?.huddles || []
