@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { api, safeQuery, API_BASE } from '../lib/api'
+import { getCurrentCoachId } from '../lib/auth'
 import {
   DataList,
   LoadingBlock,
@@ -35,7 +36,7 @@ const MAX_RECORD_MS = 30_000
 
 export function ComposePage() {
   const [coachId, setCoachId] = useState(
-    () => localStorage.getItem('ph_coach_id') || 'athlete_01',
+    () => getCurrentCoachId(),
   )
   const [text, setText] = useState('')
   const [selected, setSelected] = useState(new Set())

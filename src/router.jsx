@@ -14,6 +14,7 @@ import { CommunityPage } from './pages/CommunityPage'
 import { LeaderboardPage } from './pages/LeaderboardPage'
 import { InboxPage } from './pages/InboxPage'
 import { ComposePage } from './pages/ComposePage'
+import { LoginPage } from './pages/LoginPage'
 
 const rootRoute = createRootRoute({
   component: AppShell,
@@ -115,6 +116,12 @@ function CoachMorningRouteComponent() {
   return <CoachMorningPage coachId={coachId} />
 }
 
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/login',
+  component: LoginPage,
+})
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   dashboardRoute,
@@ -129,6 +136,7 @@ const routeTree = rootRoute.addChildren([
   athleteRoute,
   sessionRoute,
   coachMorningRoute,
+  loginRoute,
 ])
 
 export const router = createRouter({
