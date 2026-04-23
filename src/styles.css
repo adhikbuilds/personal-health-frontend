@@ -790,3 +790,128 @@ select {
   color: var(--danger);
 }
 
+/* ─── Auth pages ───────────────────────────────────────────────────── */
+.app-shell.auth-only { display: block; }
+.app-shell.auth-only .app-main {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.auth-wrap {
+  width: 100%;
+  max-width: 420px;
+}
+
+.auth-card {
+  background: var(--bg-panel-strong);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: var(--shadow);
+}
+
+.auth-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.auth-head .brand-mark {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--brand), var(--brand-deep));
+  color: #001;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 13px;
+}
+.auth-head strong { display: block; font-size: 15px; }
+.auth-head small  { display: block; color: var(--muted); font-size: 12px; }
+
+.auth-field {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.auth-field span {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+.auth-field input {
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+}
+.auth-field input:focus {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+
+.auth-error {
+  background: rgba(255, 107, 107, 0.08);
+  color: var(--danger);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.auth-cta {
+  margin-top: 6px;
+  background: linear-gradient(135deg, var(--brand), var(--brand-deep));
+  color: #001;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+}
+.auth-cta:disabled {
+  background: var(--bg-elevated);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.auth-altlink {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px;
+}
+.auth-altlink:hover { color: var(--text); }
+
+/* Logout button in sidebar status card */
+.status-card.auth-card { flex-wrap: wrap; }
+.status-card .logout-btn {
+  margin-top: 6px;
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.status-card .logout-btn:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api, safeQuery } from '../lib/api'
+import { getCurrentAthleteId } from '../lib/auth'
 import {
   DataList,
   LoadingBlock,
@@ -41,8 +42,9 @@ import {
 export function LeaderboardPage() {
   const [view, setView] = useState('bucket') // 'bucket' | 'podium' | 'huddle'
   const [sport, setSport] = useState('all')
-  // Stubbed "me" — in a real auth flow this comes from /auth/me
-  const [selfId] = useState(() => localStorage.getItem('ph_self_athlete_id') || 'athlete_01')
+  // Resolves from /auth/me via the cached user; falls back to legacy
+  // localStorage during the auth-rollout transition.
+  const [selfId] = useState(() => getCurrentAthleteId())
 
   const lbQuery = useQuery({
     queryKey: ['leaderboard', sport],

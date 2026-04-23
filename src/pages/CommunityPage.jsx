@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { api, safeQuery } from '../lib/api'
+import { getCurrentAthleteId } from '../lib/auth'
 import {
   DataList,
   LoadingBlock,
@@ -122,9 +123,7 @@ export function CommunityPage() {
 function FeedRow({ item }) {
   const [clapped, setClapped] = useState(false)
   const [serverCount, setServerCount] = useState(null)
-  const viewerId =
-    (typeof localStorage !== 'undefined' && localStorage.getItem('ph_viewer_id')) ||
-    'athlete_01'
+  const viewerId = getCurrentAthleteId()
   const targetId = item.target_id || item.session_id || item.athlete_id
   const clapMut = useMutation({
     mutationFn: () =>
