@@ -534,6 +534,70 @@ select {
   }
 }
 
+/* ── Phone viewport ────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* Sidebar becomes a horizontal scrollable strip at top */
+  .app-sidebar {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 12px;
+    gap: 12px;
+    align-items: center;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    width: 100%;
+  }
+  .app-sidebar .brand {
+    flex: 0 0 auto;
+    margin-right: 12px;
+  }
+  .nav-stack {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 8px;
+    overflow-x: auto;
+  }
+  .nav-link {
+    white-space: nowrap;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  /* Hide the bottom status cards on phone — too cramped */
+  .status-card { display: none; }
+
+  .app-main {
+    padding: 14px;
+  }
+
+  /* Stat cards stack one per row */
+  .stat-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .stat-card { padding: 10px 12px; }
+  .stat-card .label { font-size: 10px; }
+  .stat-card .value { font-size: 18px; }
+
+  /* Form controls breathe */
+  .input-control,
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Tighter panel padding */
+  .panel { padding: 14px; }
+
+  /* Toaster sits above bottom edge */
+  .toaster { right: 12px; bottom: 12px; left: 12px; }
+  .toast { max-width: 100%; }
+}
+
+@media (max-width: 380px) {
+  .stat-grid { grid-template-columns: 1fr; }
+}
+
 /* ── Community / Leaderboard / Inbox additions ──────────────────────────── */
 
 .rank-row.rank-self {
