@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, safeQuery } from '../lib/api'
+import { toast } from '../lib/toast'
 import { LoadingBlock, PageIntro, Panel, Pill, StatCard, StatGrid } from '../components/Primitives'
 
 export function PlanPage() {
@@ -34,15 +35,19 @@ export function PlanPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plan-weekly', athleteId] })
       queryClient.invalidateQueries({ queryKey: ['plan-history', athleteId] })
+      toast.success('Plan regenerated.')
     },
+    onError: (e) => toast.error(`Regenerate failed: ${e?.message || 'unknown error'}`),
   })
 
   const completeDay = useMutation({
     mutationFn: (date) => api.post(`/plan/${athleteId}/day/${date}/complete`),
-    onSuccess: () => {
+    onSuccess: (_d, date) => {
       queryClient.invalidateQueries({ queryKey: ['plan-weekly', athleteId] })
       queryClient.invalidateQueries({ queryKey: ['plan-history', athleteId] })
+      toast.success(`Marked ${date} complete.`)
     },
+    onError: (e) => toast.error(`Could not mark complete: ${e?.message || 'unknown error'}`),
   })
 
   const plan = planQuery.data

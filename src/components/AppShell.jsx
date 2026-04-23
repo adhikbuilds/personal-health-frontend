@@ -4,6 +4,9 @@ import { useEffect } from 'react'
 import { api, safeQuery } from '../lib/api'
 import { useCurrentUser, isAuthed, logout } from '../lib/auth'
 
+// /map is intentionally hidden — the page is currently a stub. The route
+// stays registered so direct links don't 404, but it's removed from the
+// sidebar until real map data ships.
 const navItems = [
   { to: '/', label: 'Overview' },
   { to: '/dashboard', label: 'Dashboard' },
@@ -14,7 +17,6 @@ const navItems = [
   { to: '/huddle', label: 'Huddle' },
   { to: '/plan', label: 'Plan' },
   { to: '/wellness', label: 'Wellness Analytics' },
-  { to: '/map', label: 'Map' },
 ]
 
 export function AppShell() {
