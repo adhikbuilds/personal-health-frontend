@@ -380,23 +380,26 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* SECTION 12: FEATURED PROGRAMS */}
+      {/* SECTION 12: SUPPORTED SPORTS — replaces aspirational "Programs" with real product scope */}
       <section style={{ padding: '100px 32px', background: '#fff' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-          <div style={{ marginBottom: '40px' }}>
+          <div style={{ marginBottom: '40px', textAlign: 'center' }}>
             <div style={{ fontSize: '11px', fontWeight: 700, color: ORANGE, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '16px' }}>
-              Programs
+              Built for these sports
             </div>
             <h2 style={{ fontSize: 'clamp(32px, 4vw, 48px)', fontWeight: 800, margin: 0, letterSpacing: '-1px' }}>
-              Built for every goal.
+              Form analysis tuned to your sport.
             </h2>
+            <p style={{ fontSize: '14px', color: GRAY, marginTop: '14px', maxWidth: '560px', marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.5 }}>
+              Each sport has its own joint-angle thresholds, rep detection, and form scoring rules.
+            </p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
-            <ProgramCard name="Strength" sessions="32 sessions" emoji="💪" />
-            <ProgramCard name="Athletic Drills" sessions="40 sessions" emoji="🏃" featured />
-            <ProgramCard name="Mind & Body" sessions="18 sessions" emoji="🧘" />
-            <ProgramCard name="Recovery" sessions="12 sessions" emoji="🌿" />
-            <ProgramCard name="Sports-Specific" sessions="24 sessions" emoji="⚽" />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+            <SportCard name="Cricket"     emoji="🏏" example="Bat swing, bowl action" />
+            <SportCard name="Sprint"      emoji="🏃" example="Drive phase, acceleration" featured />
+            <SportCard name="Strength"    emoji="🏋️" example="Squat, deadlift, bench" />
+            <SportCard name="Basketball"  emoji="🏀" example="Jump, landing, shot form" />
+            <SportCard name="Football"    emoji="⚽" example="Kick mechanics, agility" />
           </div>
         </div>
       </section>
@@ -710,20 +713,22 @@ function PricingCard({ tier, price, period, features, cta, ctaTo, featured }) {
   )
 }
 
-function ProgramCard({ name, sessions, emoji, featured }) {
+function SportCard({ name, emoji, example, featured }) {
   return (
     <div style={{
       padding: '24px',
-      background: featured ? ORANGE : LIGHT,
+      background: featured ? ORANGE : '#fff',
       color: featured ? '#fff' : DARK,
       borderRadius: '8px',
       border: featured ? 'none' : `1px solid ${BORDER}`,
       cursor: 'pointer',
-      transition: 'transform 0.2s',
+      transition: 'transform 0.2s, box-shadow 0.2s',
     }}>
-      <div style={{ fontSize: '36px', marginBottom: '16px' }}>{emoji}</div>
+      <div style={{ fontSize: '36px', marginBottom: '12px' }}>{emoji}</div>
       <div style={{ fontSize: '16px', fontWeight: 800, marginBottom: '4px' }}>{name}</div>
-      <div style={{ fontSize: '11px', opacity: 0.7 }}>{sessions}</div>
+      <div style={{ fontSize: '11px', opacity: featured ? 0.85 : 0.6, lineHeight: 1.4 }}>
+        {example}
+      </div>
     </div>
   )
 }
@@ -956,25 +961,7 @@ function HeroPhoneMockup() {
             🏏 CRICKET · BAT SWING
           </div>
 
-          {/* FORM SCORE FLOATING BIG (top of screen) */}
-          <div style={{
-            position: 'absolute',
-            top: '92px',
-            right: '20px',
-            background: ORANGE,
-            color: '#fff',
-            borderRadius: '10px',
-            padding: '10px 16px',
-            boxShadow: '0 8px 24px rgba(252,76,2,0.4)',
-            zIndex: 3,
-            textAlign: 'center',
-          }}>
-            <div style={{ fontSize: '8px', opacity: 0.85, fontWeight: 700, letterSpacing: '0.5px' }}>FORM SCORE</div>
-            <div style={{ fontSize: '32px', fontWeight: 800, lineHeight: 1, marginTop: '2px' }}>87</div>
-            <div style={{ fontSize: '8px', opacity: 0.9, fontWeight: 600, marginTop: '2px' }}>↑ +8</div>
-          </div>
-
-          {/* Bottom heart rate + reps card (overlay) */}
+          {/* Bottom stats card (HR · Form · Reps · Sets) */}
           <div style={{
             position: 'absolute',
             bottom: '16px',
@@ -1002,6 +989,10 @@ function HeroPhoneMockup() {
               </svg>
             </div>
             <div style={{ display: 'flex', gap: '14px' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '20px', fontWeight: 800, color: ORANGE }}>87</div>
+                <div style={{ fontSize: '8px', opacity: 0.5, fontWeight: 700 }}>FORM</div>
+              </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '18px', fontWeight: 800 }}>12</div>
                 <div style={{ fontSize: '8px', opacity: 0.5, fontWeight: 700 }}>REPS</div>
