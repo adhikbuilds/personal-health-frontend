@@ -9,7 +9,6 @@ const FALLBACK_TEAM = {
   athletes: [],
   summary: { avg_score: null, ready_count: 0, caution_count: 0, rest_count: 0, total_athletes: 0 },
 }
-const FALLBACK_NUTRITION = { athletes: [], team_avg_calories_pct: 0 }
 const FALLBACK_TRENDS = { trends: [], direction: 'stable' }
 
 function scoreColor(score) {
@@ -55,13 +54,20 @@ export function WellnessPage() {
     refetchInterval: 60_000,
     enabled: Boolean(coachId),
   })
-  const nutritionQuery = useQuery({
-    queryKey: ['nutrition-team'],
-    queryFn: () => FALLBACK_NUTRITION,
+  const rosterIds = (teamQuery.data?.athletes || []).map((a) => a.id).filter(Boolean)
+  const trackerQuery = useQuery({
+    queryKey: ['daily-trackers', coachId, rosterIds.join(',')],
+    queryFn: () =>
+      Promise.all(
+        rosterIds.map((id) =>
+          safeQuery(() => api.get(`/athlete/${encodeURIComponent(id)}/daily-tracker`), { athlete_id: id, tracker: {} })
+        ),
+      ),
+    enabled: rosterIds.length > 0,
+    staleTime: 120_000,
   })
 
   const team = teamQuery.data || FALLBACK_TEAM
-  const nutrition = nutritionQuery.data || FALLBACK_NUTRITION
   const summary = team.summary || {}
   const athletes = team.athletes || []
   const noDataAthletes = athletes.filter(a => a.recovery_status === 'unknown')
@@ -119,32 +125,34 @@ export function WellnessPage() {
           )}
         </Panel>
 
-        {/* WN-27: Nutrition compliance */}
-        <Panel title="Nutrition compliance" kicker="Today">
-          {nutritionQuery.isLoading ? <LoadingBlock /> : (
+        {/* Daily tracker overview */}
+        <Panel title="Daily tracker — team" kicker="Today">
+          {trackerQuery.isLoading ? <LoadingBlock /> : (
             <DataList
-              items={(nutrition.athletes || []).slice().sort((a, b) => a.calories_pct - b.calories_pct)}
-              empty="No nutrition data. Seed nutrition to populate."
-              renderItem={(a) => {
-                const flagColor = a.flag === 'red' ? '#ef4444' : a.flag === 'yellow' ? '#facc15' : '#22c55e'
+              items={(trackerQuery.data || []).map((d) => {
+                const a = athletes.find((x) => x.id === d.athlete_id) || {}
+                return { ...d, name: a.name || d.athlete_id }
+              })}
+              empty="No tracker data yet. Athletes log daily via the mobile app."
+              renderItem={(d) => {
+                const t = d.tracker || {}
                 return (
-                  <div className="rank-row" key={a.id}>
-                    <div className="rank-copy">
-                      <strong>{a.name}</strong>
-                      <span>{a.meals_logged} meal{a.meals_logged !== 1 ? 's' : ''} logged</span>
+                  <div className="list-row" key={d.athlete_id} style={{ flexWrap: 'wrap', gap: 4 }}>
+                    <div style={{ flex: 1, minWidth: 100 }}>
+                      <strong style={{ color: '#f1f5f9', fontSize: 13 }}>{d.name}</strong>
                     </div>
-                    <div className="rank-score" style={{ minWidth: 100 }}>
-                      <em style={{ color: flagColor }}>{a.calories_pct}% cal</em>
-                      <ProgressBar value={Math.min(100, a.calories_pct)} />
+                    <div style={{ display: 'flex', gap: 14, fontSize: 12, color: '#94a3b8' }}>
+                      <span>{t.steps ?? '—'} <small>steps</small></span>
+                      <span>{t.active_minutes ?? '—'} <small>min</small></span>
+                      <span>{t.sleep_hours ?? '—'} <small>hr sleep</small></span>
+                      <span>{t.water_glasses ?? '—'} <small>water</small></span>
+                      <span>{t.calorie_intake ?? '—'} <small>kcal</small></span>
                     </div>
                   </div>
                 )
               }}
             />
           )}
-          <div style={{ marginTop: 12, padding: '8px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: 8, fontSize: 12, color: '#94a3b8' }}>
-            Team avg calories: <strong style={{ color: '#f1f5f9' }}>{nutrition.team_avg_calories_pct ?? 0}%</strong> of daily goal
-          </div>
         </Panel>
 
         {/* WN-28: Wellness trends chart — team level implied from athlete data */}

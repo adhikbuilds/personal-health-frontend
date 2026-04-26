@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, safeQuery } from '../lib/api'
 import { getCurrentAthleteId } from '../lib/auth'
@@ -74,6 +74,35 @@ export function HuddlePage() {
   }, [allHuddles, filter])
   const activeHuddle = allHuddles.find((huddle) => huddle.status === 'active' || huddle.status === 'waiting')
 
+  const [liveData, setLiveData] = useState(null)
+  const [wsConnected, setWsConnected] = useState(false)
+  const wsRef = useRef(null)
+
+  useEffect(() => {
+    if (!activeHuddle?.huddle_id || activeHuddle.status !== 'active') {
+      if (wsRef.current) { wsRef.current.close(); wsRef.current = null }
+      setWsConnected(false)
+      setLiveData(null)
+      return
+    }
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const url = `${proto}//${window.location.host}/ws/huddle/${activeHuddle.huddle_id}/watch`
+    const ws = new WebSocket(url)
+    wsRef.current = ws
+    ws.onopen = () => setWsConnected(true)
+    ws.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data)
+        if (msg.live) setLiveData(msg.live)
+      } catch {}
+    }
+    ws.onerror = () => setWsConnected(false)
+    ws.onclose = () => { setWsConnected(false); wsRef.current = null }
+    return () => { ws.close(); wsRef.current = null }
+  }, [activeHuddle?.huddle_id, activeHuddle?.status])
+
+  const leaderboard = liveData?.leaderboard || activeHuddle?.leaderboard || []
+
   return (
     <>
       <PageIntro
@@ -142,14 +171,15 @@ export function HuddlePage() {
           {activeHuddle ? (
             <div className="active-huddle">
               <strong>{activeHuddle.name}</strong>
-              <p>{activeHuddle.sport?.replace(/_/g, ' ')} · {(activeHuddle.athletes || []).length}/{activeHuddle.max_athletes} athletes</p>
+              <p>{activeHuddle.sport?.replace(/_/g, ' ')} · {(liveData?.participants || activeHuddle.athletes || []).length}/{activeHuddle.max_athletes} athletes</p>
               <div className="pill-row">
                 <Pill tone={activeHuddle.status === 'active' ? 'success' : 'warm'}>{activeHuddle.status}</Pill>
                 <Pill tone="neutral">{activeHuddle.coach_id || 'No coach'}</Pill>
+                <Pill tone={wsConnected ? 'live' : 'neutral'}>{wsConnected ? 'live' : 'polling'}</Pill>
               </div>
               <div className="table-shell">
-                {(activeHuddle.leaderboard || []).length ? (
-                  (activeHuddle.leaderboard || []).map((athlete, index) => (
+                {leaderboard.length ? (
+                  leaderboard.map((athlete, index) => (
                     <div key={`${athlete.athlete_id}-${index}`} className="table-row">
                       <span>{index + 1}</span>
                       <strong>{athlete.name || athlete.athlete_id}</strong>
