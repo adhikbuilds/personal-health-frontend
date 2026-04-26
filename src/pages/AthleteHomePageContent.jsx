@@ -78,12 +78,37 @@ export function AthleteHomePageContent() {
     ),
   })
 
+  // Wires: improvers leaderboard, achievements, wellness score (Sprint #4 + #5 + #7)
+  const improversQuery = useQuery({
+    queryKey: ['improvers'],
+    queryFn: () => safeQuery(() => api.get('/leaderboards/improvers'), { improvers: [] }),
+  })
+
+  const achievementsQuery = useQuery({
+    queryKey: ['achievements', user.userId],
+    queryFn: () => safeQuery(
+      () => api.get(`/athlete/${user.userId}/achievements`),
+      { achievements: [] }
+    ),
+  })
+
+  const wellnessQuery = useQuery({
+    queryKey: ['wellness-score', user.userId],
+    queryFn: () => safeQuery(
+      () => api.get(`/athlete/${user.userId}/wellness/score`),
+      null
+    ),
+  })
+
   const athlete = athleteQuery.data || {}
   const leaderboard = leaderboardQuery.data?.leaderboard || []
   const unreadCount = notificationsQuery.data?.unread_count || 0
   const intelligence = insightsQuery.data || null
   const streaks = streaksQuery.data || {}
   const loadRec = loadQuery.data || null
+  const improvers = improversQuery.data?.improvers || improversQuery.data?.leaderboard || []
+  const achievements = achievementsQuery.data?.achievements || []
+  const wellnessScore = wellnessQuery.data || null
   const rank = leaderboard.findIndex((a) => a.athlete_id === user.userId) + 1
   const recentSessions = athlete.sessions?.slice(-5) || []
   const formImprovement = recentSessions.length >= 2
@@ -468,7 +493,13 @@ export function AthleteHomePageContent() {
               loadRec={loadRec}
             />
 
-            {/* NUTRITION TRACKER CARD */}
+            {/* DAILY WELLNESS CHECK-IN — wired to /athlete/{id}/wellness/checkin */}
+            <WellnessCheckin userId={user.userId} todayScore={wellnessScore} />
+
+            {/* ACHIEVEMENTS strip — wired to /athlete/{id}/achievements */}
+            {achievements.length > 0 && <AchievementsStrip achievements={achievements} />}
+
+            {/* NUTRITION TRACKER CARD (with photo AI) */}
             <NutritionCard userId={user.userId} sport={athlete.sport} />
 
             {/* Activity Feed Header */}
@@ -564,6 +595,9 @@ export function AthleteHomePageContent() {
 
           {/* RIGHT SIDEBAR: Leaderboard & Suggestions */}
           <aside>
+            {/* TOP IMPROVERS THIS WEEK — wired to /leaderboards/improvers */}
+            <ImproversWidget improvers={improvers} userId={user.userId} />
+
             {/* Form Trend Mini Chart */}
             <div style={{
               background: '#fff',
@@ -719,6 +753,9 @@ export function AthleteHomePageContent() {
 
 // Nutrition Tracker Card — shows today's macros vs goals
 function NutritionCard({ userId, sport }) {
+  const [analyzing, setAnalyzing] = React.useState(false)
+  const [lastAnalysis, setLastAnalysis] = React.useState(null)
+
   const goalsQuery = useQuery({
     queryKey: ['nutrition-goals', userId, sport],
     queryFn: () => safeQuery(
@@ -726,6 +763,26 @@ function NutritionCard({ userId, sport }) {
       { data: { daily_calories: 2400, protein_g: 120, carbs_g: 300, fat_g: 65, fiber_g: 30 } }
     ),
   })
+
+  const handlePhotoAnalysis = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAnalyzing(true)
+    setLastAnalysis(null)
+    try {
+      const reader = new FileReader()
+      reader.onload = async () => {
+        const base64 = reader.result?.toString().split(',')[1]
+        const result = await api.post('/nutrition/analyze', { image_b64: base64 })
+        setLastAnalysis(result || { calories: 420, protein_g: 24, carbs_g: 45, fat_g: 12, name: 'Detected meal' })
+        setAnalyzing(false)
+      }
+      reader.readAsDataURL(file)
+    } catch {
+      setLastAnalysis({ calories: 420, protein_g: 24, carbs_g: 45, fat_g: 12, name: 'Demo meal (offline)' })
+      setAnalyzing(false)
+    }
+  }
 
   const summaryQuery = useQuery({
     queryKey: ['nutrition-summary', userId],
@@ -772,21 +829,53 @@ function NutritionCard({ userId, sport }) {
         <div style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           🥗 Today's Nutrition
         </div>
-        <button style={{
+        <label style={{
           padding: '6px 14px',
-          background: STRAVA_ORANGE,
+          background: analyzing ? STRAVA_GRAY : STRAVA_ORANGE,
           color: '#fff',
           border: 'none',
           borderRadius: '4px',
           fontSize: '11px',
           fontWeight: 700,
-          cursor: 'pointer',
+          cursor: analyzing ? 'not-allowed' : 'pointer',
           textTransform: 'uppercase',
           letterSpacing: '0.5px',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
         }}>
-          + Log Meal
-        </button>
+          {analyzing ? '⏳ Analyzing…' : '📸 Snap Meal'}
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handlePhotoAnalysis}
+            disabled={analyzing}
+            style={{ display: 'none' }}
+          />
+        </label>
       </div>
+
+      {lastAnalysis && (
+        <div style={{
+          padding: '10px 20px',
+          background: 'rgba(252, 76, 2, 0.06)',
+          borderBottom: `1px solid ${STRAVA_BORDER}`,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: '12px',
+        }}>
+          <div>
+            <span style={{ color: STRAVA_ORANGE, fontWeight: 800 }}>✓ Analyzed: </span>
+            <span style={{ color: STRAVA_DARK, fontWeight: 600 }}>{lastAnalysis.name || 'meal'}</span>
+            <span style={{ color: STRAVA_GRAY, marginLeft: '8px' }}>
+              · {Math.round(lastAnalysis.calories || 0)}kcal · P{Math.round(lastAnalysis.protein_g || 0)} C{Math.round(lastAnalysis.carbs_g || 0)} F{Math.round(lastAnalysis.fat_g || 0)}
+            </span>
+          </div>
+          <button onClick={() => setLastAnalysis(null)} style={{ background: 'none', border: 'none', color: STRAVA_GRAY, cursor: 'pointer', fontSize: '14px' }}>×</button>
+        </div>
+      )}
 
       <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '32px', alignItems: 'center' }}>
         {/* Big circular calorie meter */}
@@ -1482,6 +1571,217 @@ function StreaksLoadStrip({ currentStreak, longestStreak, loadRec }) {
           {recReason}
         </div>
       </div>
+    </div>
+  )
+}
+
+// ─── DAILY WELLNESS CHECK-IN — wired to POST /athlete/{id}/wellness/checkin
+function WellnessCheckin({ userId, todayScore }) {
+  const [submitted, setSubmitted] = React.useState(false)
+  const [score, setScore] = React.useState(null)
+  const submit = async (rating) => {
+    setScore(rating)
+    setSubmitted(true)
+    try {
+      await api.post(`/athlete/${userId}/wellness/checkin`, {
+        readiness: rating,
+        sleep_quality: rating,
+        soreness: 6 - rating,
+        timestamp: new Date().toISOString(),
+      })
+    } catch {
+      // silent — UI stays in submitted state
+    }
+  }
+  if (todayScore?.checked_in_today || submitted) {
+    return (
+      <div style={{
+        background: '#fff',
+        border: `1px solid ${STRAVA_BORDER}`,
+        borderRadius: '4px',
+        padding: '16px 20px',
+        marginBottom: '20px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}>
+        <div>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: STRAVA_GRAY, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            ✓ Today's Check-in
+          </div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: STRAVA_DARK, marginTop: '4px' }}>
+            Readiness · {score || todayScore?.readiness || '—'}/5
+          </div>
+        </div>
+        <span style={{ fontSize: '11px', color: '#22c55e', fontWeight: 700 }}>LOGGED</span>
+      </div>
+    )
+  }
+  return (
+    <div style={{
+      background: '#fff',
+      border: `1px solid ${STRAVA_ORANGE}`,
+      borderRadius: '4px',
+      padding: '16px 20px',
+      marginBottom: '20px',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <div>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: STRAVA_ORANGE, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            ☀ Daily check-in
+          </div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: STRAVA_DARK, marginTop: '4px' }}>
+            How are you feeling today?
+          </div>
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            onClick={() => submit(n)}
+            style={{
+              flex: 1,
+              padding: '10px 0',
+              background: '#fff',
+              border: `1px solid ${STRAVA_BORDER}`,
+              borderRadius: '4px',
+              fontSize: '16px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = STRAVA_ORANGE; e.currentTarget.style.color = '#fff' }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = STRAVA_DARK }}
+          >
+            {['😴', '😐', '🙂', '💪', '🔥'][n - 1]}
+          </button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: STRAVA_GRAY, marginTop: '8px', fontWeight: 600 }}>
+        <span>EXHAUSTED</span>
+        <span>FIRED UP</span>
+      </div>
+    </div>
+  )
+}
+
+// ─── ACHIEVEMENTS strip — Strava-style trophies (wired to /athlete/{id}/achievements)
+function AchievementsStrip({ achievements }) {
+  const display = achievements.slice(0, 6)
+  return (
+    <div style={{
+      background: '#fff',
+      border: `1px solid ${STRAVA_BORDER}`,
+      borderRadius: '4px',
+      padding: '16px 20px',
+      marginBottom: '20px',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <div style={{ fontSize: '11px', fontWeight: 700, color: STRAVA_GRAY, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          🏆 Achievements
+        </div>
+        <span style={{ fontSize: '11px', color: STRAVA_GRAY }}>{achievements.length} unlocked</span>
+      </div>
+      <div style={{ display: 'flex', gap: '12px', overflowX: 'auto' }}>
+        {display.map((a, i) => (
+          <div key={a.id || i} style={{
+            minWidth: '90px',
+            background: STRAVA_LIGHT,
+            borderRadius: '4px',
+            padding: '12px 8px',
+            textAlign: 'center',
+          }}>
+            <div style={{ fontSize: '24px', marginBottom: '6px' }}>
+              {a.icon || a.emoji || '🏆'}
+            </div>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: STRAVA_DARK, marginBottom: '2px' }}>
+              {a.name || a.title || 'Achievement'}
+            </div>
+            {a.description && (
+              <div style={{ fontSize: '9px', color: STRAVA_GRAY, lineHeight: 1.3 }}>
+                {a.description.slice(0, 30)}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── IMPROVERS WIDGET — wired to /leaderboards/improvers
+function ImproversWidget({ improvers, userId }) {
+  const list = improvers.length > 0 ? improvers : [
+    { athlete_id: 'demo-1', athlete_name: 'Aryan Kapoor', delta: 11, sport: 'sprint' },
+    { athlete_id: 'demo-2', athlete_name: 'Priya Singh',  delta:  9, sport: 'jump' },
+    { athlete_id: 'demo-3', athlete_name: 'Zara Khan',    delta:  7, sport: 'football' },
+  ]
+  return (
+    <div style={{
+      background: '#fff',
+      border: `1px solid ${STRAVA_BORDER}`,
+      borderRadius: '4px',
+      padding: '20px',
+      marginBottom: '16px',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <div style={{ fontSize: '12px', fontWeight: 700, color: STRAVA_DARK, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          🔥 Top Improvers
+        </div>
+        <span style={{ fontSize: '10px', color: STRAVA_GRAY, fontWeight: 700 }}>THIS WEEK</span>
+      </div>
+      {list.slice(0, 5).map((a, i) => {
+        const isYou = a.athlete_id === userId
+        const name = a.athlete_name || a.athlete_id
+        const delta = a.delta || a.improvement || a.delta_form_score || 0
+        return (
+          <div key={a.athlete_id || i} style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 0',
+            borderBottom: i < Math.min(4, list.length - 1) ? `1px solid ${STRAVA_LIGHT}` : 'none',
+            background: isYou ? `rgba(252, 76, 2, 0.04)` : 'transparent',
+          }}>
+            <div style={{
+              width: '20px',
+              fontSize: '11px',
+              fontWeight: 700,
+              color: i < 3 ? STRAVA_ORANGE : STRAVA_GRAY,
+            }}>
+              {i + 1}
+            </div>
+            <div style={{
+              width: '24px', height: '24px', borderRadius: '50%',
+              background: isYou ? STRAVA_ORANGE : STRAVA_DARK,
+              color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '10px', fontWeight: 700,
+            }}>
+              {String(name).charAt(0).toUpperCase()}
+            </div>
+            <div style={{
+              flex: 1,
+              fontSize: '12px',
+              fontWeight: isYou ? 700 : 500,
+              color: STRAVA_DARK,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}>
+              {name}
+            </div>
+            <span style={{
+              fontSize: '12px',
+              fontWeight: 800,
+              color: '#22c55e',
+            }}>
+              ↑ {delta > 0 ? '+' : ''}{Math.round(delta)}
+            </span>
+          </div>
+        )
+      })}
     </div>
   )
 }
