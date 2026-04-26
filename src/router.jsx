@@ -1,20 +1,24 @@
 import React from 'react'
-import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router'
+import { createRootRoute, createRoute, createRouter, useNavigate } from '@tanstack/react-router'
 import { AppShell } from './components/AppShell'
-import { HomePage } from './pages/HomePage'
-import { DashboardPage } from './pages/DashboardPage'
-import { PlanPage } from './pages/PlanPage'
-import { HuddlePage } from './pages/HuddlePage'
-import { WellnessPage } from './pages/WellnessPage'
-import { AthletePage } from './pages/AthletePage'
+import { LandingPage } from './pages/LandingPage'
+import { ProperLoginPage } from './pages/ProperLoginPage'
+import { ProperSignupPage } from './pages/ProperSignupPage'
+import { EnhancedCoachDashboard } from './pages/coach/EnhancedCoachDashboard'
+import { TeamAnalyticsPage } from './pages/coach/TeamAnalyticsPage'
+import { DrillLibraryPage } from './pages/coach/DrillLibraryPage'
+import { PerformanceReportsPage } from './pages/coach/PerformanceReportsPage'
+import { MessagingPage } from './pages/MessagingPage'
+import { AthleteHomePageContent } from './pages/AthleteHomePageContent'
+import { FormAnalyticsPage } from './pages/athlete/FormAnalyticsPage'
+import { TrainingCalendarPage } from './pages/athlete/TrainingCalendarPage'
+import { LeaderboardPage } from './pages/athlete/LeaderboardPage'
+import { UnifiedAthleteDetailPage } from './pages/UnifiedAthleteDetailPage'
 import { SessionPage } from './pages/SessionPage'
-import { CoachMorningPage } from './pages/CoachMorningPage'
-import { MapPage } from './pages/MapPage'
-import { CommunityPage } from './pages/CommunityPage'
-import { LeaderboardPage } from './pages/LeaderboardPage'
-import { InboxPage } from './pages/InboxPage'
-import { ComposePage } from './pages/ComposePage'
-import { LoginPage } from './pages/LoginPage'
+import { ParentSummaryPage } from './pages/parent/ParentSummaryPage'
+import { ParentDigestPage } from './pages/parent/ParentDigestPage'
+import { LoadingBlock } from './components/Primitives'
+import { useUser } from './context/UserContext'
 
 const rootRoute = createRootRoute({
   component: AppShell,
@@ -23,120 +27,171 @@ const rootRoute = createRootRoute({
   ),
 })
 
+function IndexComponent() {
+  const { user, loading } = useUser()
+  const navigate = useNavigate()
+
+  React.useEffect(() => {
+    if (loading) return
+    if (user) {
+      navigate({ to: '/dashboard' })
+    }
+  }, [user, loading, navigate])
+
+  if (loading) return <LoadingBlock label="Loading…" />
+  return <LandingPage />
+}
+
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: HomePage,
+  component: IndexComponent,
 })
+
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/login',
+  component: ProperLoginPage,
+})
+
+const signupRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/signup',
+  validateSearch: (search) => ({
+    role: typeof search?.role === 'string' ? search.role : null,
+  }),
+  component: ProperSignupPage,
+})
+
+function DashboardComponent() {
+  const { user, isCoach, isAthlete, loading } = useUser()
+  const navigate = useNavigate()
+
+  React.useEffect(() => {
+    if (loading) return
+    if (!user) {
+      navigate({ to: '/login' })
+    }
+  }, [user, loading, navigate])
+
+  if (loading || !user) return <LoadingBlock label="Loading…" />
+
+  if (isCoach) {
+    return <EnhancedCoachDashboard />
+  }
+
+  if (isAthlete) {
+    return <AthleteHomePageContent />
+  }
+
+  return <LoadingBlock label="Loading…" />
+}
 
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/dashboard',
-  component: DashboardPage,
-})
-
-const planRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/plan',
-  component: PlanPage,
-})
-
-const huddleRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/huddle',
-  component: HuddlePage,
-})
-
-const wellnessRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/wellness',
-  component: WellnessPage,
-})
-
-const mapRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/map',
-  component: MapPage,
-})
-
-const communityRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/community',
-  component: CommunityPage,
-})
-
-const leaderboardRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/leaderboard',
-  component: LeaderboardPage,
-})
-
-const inboxRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/inbox',
-  component: InboxPage,
-})
-
-const composeRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/compose',
-  component: ComposePage,
+  component: DashboardComponent,
 })
 
 const athleteRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/athlete/$athleteId',
-  component: AthleteRouteComponent,
+  component: function AthleteWrap() {
+    const { athleteId } = athleteRoute.useParams()
+    return <UnifiedAthleteDetailPage athleteId={athleteId} />
+  },
 })
 
 const sessionRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/session/$sessionId',
-  component: SessionRouteComponent,
+  component: function SessionWrap() {
+    const { sessionId } = sessionRoute.useParams()
+    return <SessionPage sessionId={sessionId} />
+  },
 })
 
-const coachMorningRoute = createRoute({
+// ── Parent (token-based, no login) ────────────────────────────────────────
+const parentSummaryRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/coach/$coachId/morning',
-  component: CoachMorningRouteComponent,
+  path: '/parent/$consentId',
+  validateSearch: (search) => ({
+    token: typeof search?.token === 'string' ? search.token : '',
+  }),
+  component: function ParentSummaryWrap() {
+    const { consentId } = parentSummaryRoute.useParams()
+    const { token } = parentSummaryRoute.useSearch()
+    return <ParentSummaryPage consentId={consentId} token={token} />
+  },
 })
 
-function AthleteRouteComponent() {
-  const { athleteId } = athleteRoute.useParams()
-  return <AthletePage athleteId={athleteId} />
-}
-
-function SessionRouteComponent() {
-  const { sessionId } = sessionRoute.useParams()
-  return <SessionPage sessionId={sessionId} />
-}
-
-function CoachMorningRouteComponent() {
-  const { coachId } = coachMorningRoute.useParams()
-  return <CoachMorningPage coachId={coachId} />
-}
-
-const loginRoute = createRoute({
+const parentDigestRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/login',
-  component: LoginPage,
+  path: '/digest/$token',
+  component: function ParentDigestWrap() {
+    const { token } = parentDigestRoute.useParams()
+    return <ParentDigestPage token={token} />
+  },
+})
+
+const formAnalyticsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/athlete/analytics',
+  component: FormAnalyticsPage,
+})
+
+const trainingCalendarRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/athlete/calendar',
+  component: TrainingCalendarPage,
+})
+
+const leaderboardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/athlete/leaderboard',
+  component: LeaderboardPage,
+})
+
+const teamAnalyticsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/coach/analytics',
+  component: TeamAnalyticsPage,
+})
+
+const drillLibraryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/coach/drills',
+  component: DrillLibraryPage,
+})
+
+const performanceReportsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/coach/reports',
+  component: PerformanceReportsPage,
+})
+
+const messagingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/messages',
+  component: MessagingPage,
 })
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
+  loginRoute,
+  signupRoute,
   dashboardRoute,
-  planRoute,
-  huddleRoute,
-  wellnessRoute,
-  mapRoute,
-  communityRoute,
-  leaderboardRoute,
-  inboxRoute,
-  composeRoute,
   athleteRoute,
   sessionRoute,
-  coachMorningRoute,
-  loginRoute,
+  parentSummaryRoute,
+  parentDigestRoute,
+  formAnalyticsRoute,
+  trainingCalendarRoute,
+  leaderboardRoute,
+  teamAnalyticsRoute,
+  drillLibraryRoute,
+  performanceReportsRoute,
+  messagingRoute,
 ])
 
 export const router = createRouter({

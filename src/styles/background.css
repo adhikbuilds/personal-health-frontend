@@ -1,0 +1,160 @@
+/* Futuristic Neon Dashboard Background */
+
+@keyframes gridMove {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 50px 50px;
+  }
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(6, 182, 212, 0.8);
+  }
+}
+
+@keyframes floatNeon {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translateY(-30px) translateX(20px);
+    opacity: 0.6;
+  }
+}
+
+@keyframes cyanGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 10px rgba(6, 182, 212, 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(6, 182, 212, 0.6));
+  }
+}
+
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100vh);
+  }
+}
+
+.neon-dashboard {
+  background: linear-gradient(135deg, #0a0e1a 0%, #0d1428 25%, #0a1630 50%, #0a0e1a 75%, #0b1020 100%);
+  background-attachment: fixed;
+  position: relative;
+  overflow: hidden;
+}
+
+.neon-dashboard::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    linear-gradient(0deg, transparent 24%, rgba(6, 182, 212, 0.05) 25%, rgba(6, 182, 212, 0.05) 26%, transparent 27%, transparent 74%, rgba(6, 182, 212, 0.05) 75%, rgba(6, 182, 212, 0.05) 76%, transparent 77%, transparent),
+    linear-gradient(90deg, transparent 24%, rgba(6, 182, 212, 0.05) 25%, rgba(6, 182, 212, 0.05) 26%, transparent 27%, transparent 74%, rgba(6, 182, 212, 0.05) 75%, rgba(6, 182, 212, 0.05) 76%, transparent 77%, transparent);
+  background-size: 50px 50px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.neon-dashboard::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(6, 182, 212, 0.8), transparent);
+  animation: scanline 8s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Neon Orbs */
+.neon-orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(60px);
+  pointer-events: none;
+}
+
+.neon-orb-1 {
+  top: -40%;
+  right: -5%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, transparent 70%);
+  animation: floatNeon 25s ease-in-out infinite;
+  z-index: 0;
+  box-shadow: 0 0 100px rgba(6, 182, 212, 0.3);
+}
+
+.neon-orb-2 {
+  bottom: -30%;
+  left: -10%;
+  width: 700px;
+  height: 700px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.12) 0%, transparent 70%);
+  animation: floatNeon 30s ease-in-out infinite reverse;
+  z-index: 0;
+  box-shadow: 0 0 120px rgba(139, 92, 246, 0.2);
+}
+
+.neon-orb-3 {
+  top: 20%;
+  left: 5%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(0, 255, 255, 0.08) 0%, transparent 70%);
+  animation: glowPulse 8s ease-in-out infinite;
+  z-index: 0;
+  box-shadow: 0 0 80px rgba(0, 255, 255, 0.15);
+}
+
+/* Neon glow for cards */
+.neon-card {
+  position: relative;
+  z-index: 2;
+}
+
+.neon-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
+  border-radius: 12px;
+  pointer-events: none;
+  opacity: 0;
+  animation: glowPulse 4s ease-in-out infinite;
+}
+
+/* Header styling with neon borders */
+.neon-header {
+  position: relative;
+  z-index: 10;
+  background: linear-gradient(90deg, rgba(10, 14, 26, 0.95) 0%, rgba(6, 182, 212, 0.08) 100%);
+  border-bottom: 1px solid rgba(6, 182, 212, 0.3);
+  box-shadow: 0 0 30px rgba(6, 182, 212, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+/* Content wrapper */
+.neon-content {
+  position: relative;
+  z-index: 2;
+}
