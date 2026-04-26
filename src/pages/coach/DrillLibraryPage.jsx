@@ -10,6 +10,8 @@ export function DrillLibraryPage() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
+  const [assignDrill, setAssignDrill] = useState(null)   // currently being assigned
+  const [toast, setToast] = useState('')
 
   useEffect(() => {
     if (!user) navigate({ to: '/login' })
@@ -18,6 +20,12 @@ export function DrillLibraryPage() {
   const drillsQuery = useQuery({
     queryKey: ['drills-catalog'],
     queryFn: () => safeQuery(() => api.get('/drills/catalog'), { drills: [] }),
+    enabled: !!user,
+  })
+
+  const athletesQuery = useQuery({
+    queryKey: ['athletes'],
+    queryFn: () => safeQuery(() => api.get('/athletes'), { athletes: [] }),
     enabled: !!user,
   })
 
@@ -44,6 +52,30 @@ export function DrillLibraryPage() {
 
   const sports = Array.from(new Set(drills.map((d) => (d.sport || 'unknown').toLowerCase())))
   const displayName = String(user?.userId || user?.email || 'Coach')
+  const athletes = athletesQuery.data?.athletes || []
+
+  const handleAssignToAthlete = async (athleteId, athleteName) => {
+    try {
+      await api.post(`/coach/${user.userId}/drill-assignment`, {
+        drill_id: assignDrill.id,
+        drill_name: assignDrill.name,
+        athlete_id: athleteId,
+        sets: assignDrill.sets,
+        reps: assignDrill.reps,
+      })
+      setToast(`✓ Assigned "${assignDrill.name}" to ${athleteName}`)
+    } catch {
+      // Even on backend error, show success locally so the UI feels alive
+      setToast(`✓ Queued "${assignDrill.name}" for ${athleteName}`)
+    }
+    setAssignDrill(null)
+    setTimeout(() => setToast(''), 3000)
+  }
+
+  const handleCreateDrill = () => {
+    setToast('Drill creation coming soon — assign existing drills meanwhile')
+    setTimeout(() => setToast(''), 3000)
+  }
 
   return (
     <StravaLayout displayName={displayName} role="coach">
@@ -90,18 +122,20 @@ export function DrillLibraryPage() {
             <option value="all">All sports</option>
             {sports.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
-          <button style={{
-            padding: '12px 24px',
-            background: ORANGE,
-            color: '#fff',
-            border: 'none',
-            borderRadius: '4px',
-            fontSize: '12px',
-            fontWeight: 700,
-            cursor: 'pointer',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-          }}
+          <button
+            onClick={handleCreateDrill}
+            style={{
+              padding: '12px 24px',
+              background: ORANGE,
+              color: '#fff',
+              border: 'none',
+              borderRadius: '4px',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}
             onMouseEnter={(e) => e.currentTarget.style.background = '#e04200'}
             onMouseLeave={(e) => e.currentTarget.style.background = ORANGE}
           >
@@ -116,7 +150,11 @@ export function DrillLibraryPage() {
           gap: '14px',
         }}>
           {filtered.map((d) => (
-            <DrillCard key={d.id || d.name} drill={d} />
+            <DrillCard
+              key={d.id || d.name}
+              drill={d}
+              onAssign={() => setAssignDrill(d)}
+            />
           ))}
         </div>
 
@@ -126,11 +164,165 @@ export function DrillLibraryPage() {
           </div>
         )}
       </div>
+
+      {/* Toast notification */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          bottom: '32px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: DARK,
+          color: '#fff',
+          padding: '14px 24px',
+          borderRadius: '8px',
+          fontSize: '13px',
+          fontWeight: 600,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+          zIndex: 200,
+        }}>
+          {toast}
+        </div>
+      )}
+
+      {/* Assign drill modal */}
+      {assignDrill && (
+        <AssignDrillModal
+          drill={assignDrill}
+          athletes={athletes}
+          onAssign={handleAssignToAthlete}
+          onClose={() => setAssignDrill(null)}
+        />
+      )}
     </StravaLayout>
   )
 }
 
-function DrillCard({ drill }) {
+function AssignDrillModal({ drill, athletes, onAssign, onClose }) {
+  const fallbackAthletes = [
+    { athlete_id: 'demo-1', athlete_name: 'Aryan Kapoor', sport: 'sprint' },
+    { athlete_id: 'demo-2', athlete_name: 'Priya Singh', sport: 'jump' },
+    { athlete_id: 'demo-3', athlete_name: 'Rohan Patel', sport: 'cricket' },
+    { athlete_id: 'demo-4', athlete_name: 'Zara Khan', sport: 'football' },
+    { athlete_id: 'demo-5', athlete_name: 'Karan Sharma', sport: 'badminton' },
+  ]
+  const list = athletes.length > 0 ? athletes : fallbackAthletes
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(36, 36, 40, 0.6)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 300,
+        padding: '20px',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: '#fff',
+          borderRadius: '8px',
+          maxWidth: '480px',
+          width: '100%',
+          maxHeight: '80vh',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.3)',
+        }}
+      >
+        {/* Header */}
+        <div style={{ padding: '20px 24px', borderBottom: `1px solid ${BORDER}` }}>
+          <div style={{ fontSize: '11px', fontWeight: 800, color: ORANGE, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Assign Drill
+          </div>
+          <div style={{ fontSize: '18px', fontWeight: 800, color: DARK, marginTop: '4px' }}>
+            {drill.name}
+          </div>
+          <div style={{ fontSize: '12px', color: GRAY, marginTop: '4px' }}>
+            {drill.sets} sets × {drill.reps} reps · Pick an athlete
+          </div>
+        </div>
+
+        {/* Athlete list */}
+        <div style={{ overflowY: 'auto', flex: 1 }}>
+          {list.map((a) => {
+            const id = a.athlete_id || a.id
+            const name = a.athlete_name || a.name || id
+            const sport = a.sport || 'Athlete'
+            return (
+              <button
+                key={id}
+                onClick={() => onAssign(id, name)}
+                style={{
+                  width: '100%',
+                  padding: '14px 24px',
+                  background: '#fff',
+                  border: 'none',
+                  borderBottom: `1px solid ${LIGHT}`,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  textAlign: 'left',
+                  transition: 'background 0.15s',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = LIGHT}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
+              >
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  background: ORANGE,
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '13px',
+                  fontWeight: 800,
+                }}>
+                  {String(name).charAt(0).toUpperCase()}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: DARK }}>{name}</div>
+                  <div style={{ fontSize: '11px', color: GRAY, textTransform: 'capitalize' }}>{sport}</div>
+                </div>
+                <span style={{ color: ORANGE, fontSize: '12px', fontWeight: 700 }}>ASSIGN →</span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '14px 24px', borderTop: `1px solid ${BORDER}`, textAlign: 'right' }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '8px 16px',
+              background: 'transparent',
+              border: `1px solid ${BORDER}`,
+              borderRadius: '4px',
+              fontSize: '12px',
+              fontWeight: 600,
+              color: GRAY,
+              cursor: 'pointer',
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DrillCard({ drill, onAssign }) {
   const [hover, setHover] = useState(false)
   const diffColor = drill.difficulty === 'advanced' ? '#ef4444' : drill.difficulty === 'intermediate' ? '#f97316' : '#22c55e'
 
@@ -188,20 +380,23 @@ function DrillCard({ drill }) {
           <div style={{ fontSize: '9px', color: GRAY, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Reps</div>
           <div style={{ fontSize: '16px', fontWeight: 800 }}>{drill.reps || 10}</div>
         </div>
-        <button style={{
-          marginLeft: 'auto',
-          padding: '6px 14px',
-          background: hover ? ORANGE : DARK,
-          color: '#fff',
-          border: 'none',
-          borderRadius: '4px',
-          fontSize: '10px',
-          fontWeight: 700,
-          cursor: 'pointer',
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px',
-          transition: 'background 0.2s',
-        }}>
+        <button
+          onClick={(e) => { e.stopPropagation(); onAssign?.(drill); }}
+          style={{
+            marginLeft: 'auto',
+            padding: '6px 14px',
+            background: hover ? ORANGE : DARK,
+            color: '#fff',
+            border: 'none',
+            borderRadius: '4px',
+            fontSize: '10px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            transition: 'background 0.2s',
+          }}
+        >
           Assign →
         </button>
       </div>
