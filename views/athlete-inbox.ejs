@@ -139,35 +139,27 @@
     return d.toLocaleDateString();
   }
 
-  // ── Payment status ──
-  fetch(API+'/billing/athlete/'+encodeURIComponent(athleteId))
-    .then(r=>r.ok?r.json():null).then(data=>{
-      if(!data || data.status === 'no_subscription') return;
-      if(data.paused || data.status === 'pending'){
-        const banner = document.getElementById('payment-banner');
-        banner.style.display = 'flex';
-        if(data.payment_url){
-          document.getElementById('payment-url').href = data.payment_url;
-        }
-      }
-    }).catch(()=>{});
+  // Payment banner — no athlete billing endpoint yet; hide by default
 
-  // ── Drill assignments ──
-  fetch(API+'/athlete/'+encodeURIComponent(athleteId)+'/drill-assignments')
+  // ── Weekly plan drills ──
+  fetch(API+'/plan/'+encodeURIComponent(athleteId)+'/weekly')
     .then(r=>r.ok?r.json():null).then(data=>{
       const el = document.getElementById('drill-section');
-      const items = (data&&data.assignments)||[];
-      if(!items.length){ el.innerHTML='<div class="empty">No drills assigned yet.</div>'; return; }
-      el.innerHTML = items.slice(0,3).map(d=>
-        `<div class="drill-card">
-          <div class="drill-icon">&#9654;</div>
-          <div class="drill-body">
-            <div class="drill-name">${esc(d.drill_name)}</div>
-            ${d.drill_description?`<div class="drill-desc">${esc(d.drill_description)}</div>`:''}
-            <div class="drill-date">Scheduled for ${esc(d.scheduled_for)}</div>
-          </div>
-          <a href="/session?drill=${encodeURIComponent(d.drill_name)}" class="btn btn-start">Start</a>
-        </div>`).join('');
+      if(!data||!data.days){ el.innerHTML='<div class="empty">No drills assigned yet.</div>'; return; }
+      const upcoming = data.days.filter(d=>!d.completed&&d.drills&&d.drills.length);
+      if(!upcoming.length){ el.innerHTML='<div class="empty">All drills completed this week.</div>'; return; }
+      el.innerHTML = upcoming.slice(0,3).map(day=>
+        day.drills.map(dr=>
+          `<div class="drill-card">
+            <div class="drill-icon">&#9654;</div>
+            <div class="drill-body">
+              <div class="drill-name">${esc(dr.name||dr.drill_name||day.label)}</div>
+              ${dr.description?`<div class="drill-desc">${esc(dr.description)}</div>`:''}
+              <div class="drill-date">${esc(day.day_name)} ${esc(day.date)} · ${esc(day.intensity||'')} intensity</div>
+            </div>
+            <a href="/session?drill=${encodeURIComponent(dr.name||dr.drill_name||day.label)}" class="btn btn-start">Start</a>
+          </div>`).join('')
+      ).join('');
     }).catch(()=>{});
 
   // ── Broadcasts ──
@@ -191,7 +183,7 @@
             <div class="reply-sent">Reply sent</div>
             <div class="reply-input-row">
               <input type="text" id="ri-${i}" placeholder="Reply to coach...">
-              <button class="btn btn-reply" onclick="sendReply('${esc(bc.broadcast_id)}',${i})">Send</button>
+              <button class="btn btn-reply" onclick="sendReply('${esc(bc.coach_id||'')}',${i})">Send</button>
             </div>
           </div>`;
         return `<div class="msg-card${bc.replied?'':' unread'}">
@@ -216,12 +208,12 @@
     audio.onended = ()=>{ btn.innerHTML='&#9654;'; };
   };
 
-  window.sendReply = function(broadcastId, i){
+  window.sendReply = function(coachId, i){
     const text = document.getElementById('ri-'+i).value.trim();
-    if(!text) return;
-    fetch(API+'/athlete/'+encodeURIComponent(athleteId)+'/reply', {
+    if(!text||!coachId) return;
+    fetch(API+'/messages/'+encodeURIComponent(coachId)+'/'+encodeURIComponent(athleteId), {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({broadcast_id: broadcastId, message: text})
+      body: JSON.stringify({sender: 'athlete', text: text})
     })
     .then(r=>r.ok?r.json():Promise.reject())
     .then(()=>{
