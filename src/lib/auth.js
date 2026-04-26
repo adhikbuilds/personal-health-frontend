@@ -61,6 +61,20 @@ export async function logout() {
   _notify()
 }
 
+export async function validateSession() {
+  if (!getAccessToken()) return false
+  try {
+    const user = await api.authMe()
+    setAuth(null, user)
+    _notify()
+    return true
+  } catch {
+    clearAuth()
+    _notify()
+    return false
+  }
+}
+
 // Convenience: components that need an athlete_id (Inbox, Compose, etc) can
 // derive it from the signed-in user with a single readable expression. Falls
 // back to legacy localStorage keys + 'athlete_01' for the dev-without-auth
@@ -72,7 +86,7 @@ export function getCurrentAthleteId() {
     const legacy = window.localStorage.getItem('ph_self_athlete_id')
     if (legacy) return legacy
   } catch {}
-  return 'athlete_01'
+  return null
 }
 
 export function getCurrentCoachId() {
@@ -82,5 +96,5 @@ export function getCurrentCoachId() {
     const legacy = window.localStorage.getItem('ph_coach_id')
     if (legacy) return legacy
   } catch {}
-  return 'athlete_01'
+  return null
 }

@@ -2,6 +2,7 @@
 // WN-28 (trends chart), WN-29 (correlation insights), WN-30 (alert panel)
 import { useQuery } from '@tanstack/react-query'
 import { api, safeQuery } from '../lib/api'
+import { getCurrentCoachId } from '../lib/auth'
 import { DataList, LoadingBlock, PageIntro, Panel, Pill, ProgressBar, StatCard, StatGrid } from '../components/Primitives'
 
 const FALLBACK_TEAM = {
@@ -47,15 +48,16 @@ function MiniSparkline({ values, color = '#06b6d4' }) {
 }
 
 export function WellnessPage() {
+  const coachId = getCurrentCoachId()
   const teamQuery = useQuery({
-    queryKey: ['wellness-team'],
-    queryFn: () => safeQuery(() => api.get('/wellness/team-overview'), FALLBACK_TEAM),
+    queryKey: ['wellness-team', coachId],
+    queryFn: () => safeQuery(() => api.get(`/coach/${encodeURIComponent(coachId)}/athletes`), FALLBACK_TEAM),
     refetchInterval: 60_000,
+    enabled: Boolean(coachId),
   })
   const nutritionQuery = useQuery({
     queryKey: ['nutrition-team'],
-    queryFn: () => safeQuery(() => api.get('/nutrition/team-summary'), FALLBACK_NUTRITION),
-    refetchInterval: 120_000,
+    queryFn: () => FALLBACK_NUTRITION,
   })
 
   const team = teamQuery.data || FALLBACK_TEAM

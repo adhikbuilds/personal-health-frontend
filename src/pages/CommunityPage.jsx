@@ -163,9 +163,9 @@ function FeedRow({ item }) {
         <button
           type="button"
           className={`clap-btn ${clapped ? 'clapped' : ''} ${err ? 'failed' : ''}`}
-          disabled={clapMut.isPending}
+          disabled={clapMut.isPending || !viewerId}
           onClick={() => {
-            if (clapped || clapMut.isPending) return
+            if (clapped || clapMut.isPending || !viewerId) return
             setErr(null)
             setClapped(true)
             clapMut.mutate()

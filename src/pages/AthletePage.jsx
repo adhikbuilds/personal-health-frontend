@@ -8,11 +8,11 @@ export function AthletePage({ athleteId }) {
     // safeQuery so a 403 (viewing a non-owned athlete after the
     // ownership-gate work) surfaces as a clean empty state rather than
     // an uncaught exception that breaks the whole page.
-    queryFn: () => safeQuery(() => api.get(`/athlete/${athleteId}/intelligence-report?days=30`), null),
+    queryFn: () => safeQuery(() => api.get(`/athlete/${athleteId}/insights`), null),
   })
   const summaryQuery = useQuery({
     queryKey: ['athlete-weekly', athleteId],
-    queryFn: () => safeQuery(() => api.get(`/athlete/${athleteId}/weekly-summary?weeks=4`), { week_summaries: [] }),
+    queryFn: () => safeQuery(() => api.get(`/athlete/${athleteId}/weekly-summary?days=28`), { week_summaries: [] }),
   })
 
   const report = reportQuery.data

@@ -4,13 +4,12 @@ import { LoadingBlock, PageIntro, Panel, Pill, StatCard, StatGrid } from '../com
 
 export function SessionPage({ sessionId }) {
   const replayQuery = useQuery({
-    queryKey: ['session-replay', sessionId],
-    // safeQuery so 403/404 surfaces as null + empty state instead of crashing.
-    queryFn: () => safeQuery(() => api.get(`/sessions/${sessionId}/replay?downsample=2`), null),
+    queryKey: ['session-detail', sessionId],
+    queryFn: () => safeQuery(() => api.get(`/session/${sessionId}`), null),
   })
   const scorecardQuery = useQuery({
     queryKey: ['session-scorecard', sessionId],
-    queryFn: () => safeQuery(() => api.get(`/sessions/${sessionId}/scorecard`), null),
+    queryFn: () => safeQuery(() => api.get(`/session/${sessionId}/scorecard`), null),
   })
   const repCountQuery = useQuery({
     queryKey: ['session-reps', sessionId],
@@ -35,8 +34,8 @@ export function SessionPage({ sessionId }) {
         <>
           <StatGrid>
             <StatCard label="Athlete" value={replay.athlete_id || '—'} hint="Owner of this session" />
-            <StatCard label="Frames" value={replay.total_frames || 0} hint="Replay sample size" />
-            <StatCard label="Avg form" value={replay.avg_form_score || '—'} hint="Replay average" tone="brand" />
+            <StatCard label="Frames" value={replay.summary?.total_frames || replay.frame_count || 0} hint="Total frames recorded" />
+            <StatCard label="Avg form" value={replay.summary?.avg_form_score || '—'} hint="Session average" tone="brand" />
             <StatCard label="Reps" value={repCountQuery.data?.rep_count || '—'} hint="Detected repetitions" tone="success" />
           </StatGrid>
 

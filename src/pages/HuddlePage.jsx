@@ -81,7 +81,11 @@ export function HuddlePage() {
             <label>
               <span>Sport</span>
               <select className="input-control" value={form.sport} onChange={(event) => setForm({ ...form, sport: event.target.value })}>
+                <option value="general">General</option>
                 <option value="vertical_jump">Vertical Jump</option>
+                <option value="squat">Squat</option>
+                <option value="push_up">Push-up</option>
+                <option value="pull_up">Pull-up</option>
                 <option value="sprint">Sprint</option>
                 <option value="snatch">Snatch</option>
                 <option value="javelin">Javelin</option>
