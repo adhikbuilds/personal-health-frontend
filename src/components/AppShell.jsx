@@ -2,7 +2,7 @@ import { Outlet, Link, useNavigate, useLocation } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { api, safeQuery } from '../lib/api'
-import { useCurrentUser, isAuthed, logout } from '../lib/auth'
+import { useCurrentUser, isAuthed, logout, validateSession } from '../lib/auth'
 
 // /map is intentionally hidden — the page is currently a stub. The route
 // stays registered so direct links don't 404, but it's removed from the
@@ -24,6 +24,8 @@ export function AppShell() {
   const location = useLocation()
   const user     = useCurrentUser()
   const onLoginPage = location.pathname === '/login'
+
+  useEffect(() => { validateSession() }, [])
 
   // Auth gate: if no token, route to /login. If on /login but already
   // authed, route to /. Lives in an effect so the navigation doesn't

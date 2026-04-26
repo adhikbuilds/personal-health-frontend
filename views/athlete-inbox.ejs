@@ -172,7 +172,7 @@
 
   // ── Broadcasts ──
   let _audioEls = {};
-  fetch(API+'/athlete/'+encodeURIComponent(athleteId)+'/inbox')
+  fetch(API+'/coach/inbox/athlete/'+encodeURIComponent(athleteId))
     .then(r=>r.ok?r.json():Promise.reject())
     .then(data=>{
       const el = document.getElementById('msg-list');

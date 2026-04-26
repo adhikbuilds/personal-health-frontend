@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api, safeQuery } from '../lib/api'
 import { DataList, LoadingBlock, PageIntro, Panel, Pill, StatCard, StatGrid } from '../components/Primitives'
 
-const FALLBACK_PRIORITIES = { priorities: [], roster_size: 0 }
+const FALLBACK_BRIEFING = { bullets: [], source: 'fallback' }
 const FALLBACK_TEAM = {
   athletes: [],
   summary: { avg_score: null, ready_count: 0, caution_count: 0, rest_count: 0, total_athletes: 0 },
@@ -89,22 +89,24 @@ function WellnessBand({ summary }) {
 }
 
 export function CoachMorningPage({ coachId }) {
-  const prioritiesQuery = useQuery({
-    queryKey: ['coach-priorities', coachId],
-    queryFn: () => safeQuery(() => api.get(`/coach/${coachId}/priorities`), FALLBACK_PRIORITIES),
+  const briefingQuery = useQuery({
+    queryKey: ['coach-briefing', coachId],
+    queryFn: () => safeQuery(() => api.get(`/coach/${encodeURIComponent(coachId)}/weekly-note`), FALLBACK_BRIEFING),
     refetchInterval: 120_000,
+    enabled: Boolean(coachId),
   })
   const teamQuery = useQuery({
-    queryKey: ['wellness-team'],
-    queryFn: () => safeQuery(() => api.get('/wellness/team-overview'), FALLBACK_TEAM),
+    queryKey: ['wellness-team', coachId],
+    queryFn: () => safeQuery(() => api.get(`/coach/${encodeURIComponent(coachId)}/athletes`), FALLBACK_TEAM),
     refetchInterval: 60_000,
+    enabled: Boolean(coachId),
   })
 
-  const data      = prioritiesQuery.data || FALLBACK_PRIORITIES
+  const data      = briefingQuery.data || FALLBACK_BRIEFING
   const team      = teamQuery.data || FALLBACK_TEAM
   const summary   = team.summary || {}
-  const priorities = data.priorities || []
-  const noUrgent  = priorities.length === 0
+  const bullets   = data.bullets || []
+  const noUrgent  = bullets.length === 0
 
   const now = new Date()
   const greeting = now.getHours() < 12 ? 'Morning' : now.getHours() < 17 ? 'Afternoon' : 'Evening'
@@ -114,17 +116,17 @@ export function CoachMorningPage({ coachId }) {
       <PageIntro
         eyebrow={`${greeting}, Coach`}
         title={noUrgent
-          ? 'All clear — no urgent conversations today.'
-          : `${priorities.length} athlete${priorities.length !== 1 ? 's' : ''} need your attention.`
+          ? 'All clear — no coaching notes today.'
+          : `${bullets.length} coaching note${bullets.length !== 1 ? 's' : ''} for this week.`
         }
         description="Sorted by urgency. Act on the top 1–2 before training starts."
         actions={
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <Pill tone={prioritiesQuery.isError ? 'warm' : 'live'}>
-              {prioritiesQuery.isError ? 'sample data' : 'live · 2m refresh'}
+            <Pill tone={briefingQuery.isError ? 'warm' : 'live'}>
+              {briefingQuery.isError ? 'sample data' : 'live · 2m refresh'}
             </Pill>
-            {data.roster_size > 0 && (
-              <Pill tone="brand">{data.roster_size} athletes on roster</Pill>
+            {(team.count || team.total) > 0 && (
+              <Pill tone="brand">{team.count || team.total} athletes on roster</Pill>
             )}
           </div>
         }
@@ -146,32 +148,31 @@ export function CoachMorningPage({ coachId }) {
       <div className="content-grid">
         {/* Priority list */}
         <Panel
-          title="Who to talk to"
-          kicker="Sorted by urgency"
-          right={
-            data.stale
-              ? <Pill tone="warm">Stale data</Pill>
-              : data.cached_at
-              ? <span style={{ color: '#475569', fontSize: 11 }}>cached {data.age_minutes ?? 0}m ago</span>
-              : null
-          }
+          title="Coaching briefing"
+          kicker="AI-generated notes"
+          right={data.source ? <Pill tone={data.source === 'anthropic' ? 'brand' : 'neutral'}>{data.source}</Pill> : null}
         >
-          {prioritiesQuery.isLoading ? <LoadingBlock /> : noUrgent ? (
+          {briefingQuery.isLoading ? <LoadingBlock /> : noUrgent ? (
             <div style={{ padding: '20px 0', textAlign: 'center' }}>
               <div style={{
                 width: 48, height: 48, borderRadius: '50%', margin: '0 auto 12px',
                 background: 'rgba(34,197,94,0.1)', display: 'flex', alignItems: 'center',
                 justifyContent: 'center', fontSize: 22,
               }}>✓</div>
-              <p style={{ color: '#22c55e', fontWeight: 700, margin: '0 0 4px' }}>Team looks good today.</p>
+              <p style={{ color: '#22c55e', fontWeight: 700, margin: '0 0 4px' }}>No coaching notes yet.</p>
               <p style={{ color: '#64748b', fontSize: 13, margin: 0 }}>
-                No injuries, no idle athletes, no form drops. Check back after today's sessions.
+                Notes appear after athletes complete sessions. Check back after training.
               </p>
             </div>
           ) : (
             <div>
-              {priorities.map((p, i) => (
-                <PriorityCard key={p.athlete_id} item={p} rank={i + 1} />
+              {bullets.map((bullet, i) => (
+                <div key={i} style={{
+                  padding: '12px 16px', borderRadius: 10, marginBottom: 8,
+                  background: 'rgba(6,182,212,0.06)', borderLeft: '3px solid #06b6d4',
+                }}>
+                  <p style={{ color: '#e2e8f0', fontSize: 14, margin: 0, lineHeight: 1.6 }}>{bullet}</p>
+                </div>
               ))}
             </div>
           )}

@@ -49,31 +49,34 @@ export function InboxPage() {
     queryKey: ['inbox', athleteId],
     queryFn: () =>
       safeQuery(
-        () => api.get(`/athlete/${encodeURIComponent(athleteId)}/notifications`),
-        { notifications: [], unread_count: 0, total: 0 },
+        () => api.get(`/coach/inbox/athlete/${encodeURIComponent(athleteId)}`),
+        { broadcasts: [], total: 0 },
       ),
     refetchInterval: 45_000,
     enabled: Boolean(athleteId),
   })
 
   const markAllRead = useMutation({
-    mutationFn: () =>
-      safeQuery(() => api.post(`/athlete/${encodeURIComponent(athleteId)}/notifications/read`), {
-        ok: false,
-      }),
+    // TODO: implement mark-read endpoint on backend
+    mutationFn: () => Promise.resolve({ ok: true }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['inbox', athleteId] }),
   })
 
   const generate = useMutation({
-    mutationFn: () =>
-      safeQuery(() => api.post(`/notifications/generate/${encodeURIComponent(athleteId)}`), {
-        ok: false,
-      }),
+    // TODO: implement notification generation endpoint on backend
+    mutationFn: () => Promise.resolve({ ok: true }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['inbox', athleteId] }),
   })
 
-  const items = notifQuery.data?.notifications || []
-  const unread = notifQuery.data?.unread_count ?? items.filter((n) => !n.read).length
+  const items = (notifQuery.data?.broadcasts || []).map((b) => ({
+    ...b,
+    type: 'coach_note',
+    title: b.message?.slice(0, 60) || (b.voice_note_url ? 'Voice note from coach' : 'Coach message'),
+    body: b.message || (b.voice_note_url ? 'Voice note attached' : '—'),
+    created_at: b.sent_at || b.created_at,
+    read: false,
+  }))
+  const unread = items.length
   const byType = groupBy(items, 'type')
 
   return (
