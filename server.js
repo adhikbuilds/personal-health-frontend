@@ -58,6 +58,11 @@ app.get('/config.js', (req, res) => {
   res.send(`window.AB_CONFIG = ${JSON.stringify(buildConfig(), null, 2)};`);
 });
 
+// Note: legacy EJS server-side rendering routes (/, /dashboard, /map,
+// /wellness, /athlete/:id, /session/:id) were removed when the frontend
+// migrated to a Vite/React SPA. All page routing is now client-side via
+// TanStack Router; the catch-all at the end serves dist/index.html.
+
 app.get('/api/status', async (req, res) => {
   const health = await fetchBackendData('/health', null);
   res.json({
