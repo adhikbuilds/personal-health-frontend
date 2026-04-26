@@ -4,6 +4,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useUser } from '../../context/UserContext'
 import { api, safeQuery } from '../../lib/api'
 import { StravaLayout, PageHeader, StravaCard, ORANGE, DARK, GRAY, LIGHT, BORDER } from '../../components/StravaLayout'
+import { TutorialList } from '../../components/Tutorials'
 
 export function DrillLibraryPage() {
   const { user } = useUser()
@@ -161,6 +162,13 @@ export function DrillLibraryPage() {
         {filtered.length === 0 && (
           <div style={{ padding: '60px 20px', textAlign: 'center', color: GRAY, fontSize: '13px', background: '#fff', border: `1px solid ${BORDER}`, borderRadius: '4px' }}>
             No drills match your search.
+          </div>
+        )}
+
+        {/* Tutorials for the currently filtered sport */}
+        {filter !== 'all' && filtered.length > 0 && (
+          <div style={{ marginTop: '24px' }}>
+            <TutorialList sport={filter} title={`${filter.toUpperCase()} TUTORIALS`} max={3} />
           </div>
         )}
       </div>

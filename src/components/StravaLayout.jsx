@@ -18,12 +18,14 @@ export function StravaLayout({ children, displayName, role }) {
 
   const navLinks = useCoachNav ? [
     { to: '/dashboard', label: 'Roster' },
+    { to: '/feed', label: 'Feed' },
     { to: '/coach/analytics', label: 'Analytics' },
     { to: '/coach/drills', label: 'Drills' },
     { to: '/coach/reports', label: 'Reports' },
     { to: '/messages', label: 'Messages' },
   ] : [
     { to: '/dashboard', label: 'Dashboard' },
+    { to: '/feed', label: 'Feed' },
     { to: '/athlete/analytics', label: 'Training' },
     { to: '/athlete/calendar', label: 'Calendar' },
     { to: '/athlete/leaderboard', label: 'Leaderboard' },
