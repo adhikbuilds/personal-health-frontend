@@ -4,11 +4,10 @@
   "description": "ActiveBharat | Project Eklavya — Dynamic Node.js web frontend with real-time biomechanics dashboard",
   "main": "server.js",
   "scripts": {
+    "dev": "vite",
     "build": "vite build",
-    "dev:server": "nodemon server.js",
     "preview": "vite preview",
     "start": "node server.js",
-    "dev": "vite",
     "lint": "eslint ."
   },
   "engines": {
