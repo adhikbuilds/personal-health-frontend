@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, safeQuery } from '../lib/api'
+import { getCurrentAthleteId } from '../lib/auth'
 import { toast } from '../lib/toast'
 import { LoadingBlock, PageIntro, Panel, Pill, StatCard, StatGrid } from '../components/Primitives'
 
@@ -48,7 +49,24 @@ export function HuddlePage() {
     },
     onError: (e) => toast.error(`Couldn't end huddle: ${e?.message || 'unknown error'}`),
   })
+  const joinMutation = useMutation({
+    mutationFn: (id) => api.post(`/huddle/${id}/join`, { athlete_id: getCurrentAthleteId() }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['huddles'] })
+      toast.success('Joined huddle.')
+    },
+    onError: (e) => toast.error(`Couldn't join: ${e?.message || 'unknown error'}`),
+  })
+  const leaveMutation = useMutation({
+    mutationFn: (id) => api.post(`/huddle/${id}/leave`, { athlete_id: getCurrentAthleteId() }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['huddles'] })
+      toast.success('Left huddle.')
+    },
+    onError: (e) => toast.error(`Couldn't leave: ${e?.message || 'unknown error'}`),
+  })
 
+  const athleteId = getCurrentAthleteId()
   const allHuddles = huddlesQuery.data?.huddles || []
   const visibleHuddles = useMemo(() => {
     if (filter === 'all') return allHuddles
@@ -190,6 +208,17 @@ export function HuddlePage() {
                   <button className="ghost-button danger" onClick={() => endMutation.mutate(huddle.huddle_id)}>
                     End
                   </button>
+                ) : null}
+                {(huddle.status === 'waiting' || huddle.status === 'active') && athleteId ? (
+                  (huddle.athletes || []).some((a) => a === athleteId || a?.athlete_id === athleteId) ? (
+                    <button className="ghost-button" onClick={() => leaveMutation.mutate(huddle.huddle_id)} disabled={leaveMutation.isPending}>
+                      Leave
+                    </button>
+                  ) : (
+                    <button className="ghost-button" onClick={() => joinMutation.mutate(huddle.huddle_id)} disabled={joinMutation.isPending}>
+                      Join
+                    </button>
+                  )
                 ) : null}
               </div>
             </article>

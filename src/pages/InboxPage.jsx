@@ -49,34 +49,25 @@ export function InboxPage() {
     queryKey: ['inbox', athleteId],
     queryFn: () =>
       safeQuery(
-        () => api.get(`/coach/inbox/athlete/${encodeURIComponent(athleteId)}`),
-        { broadcasts: [], total: 0 },
+        () => api.get(`/athlete/${encodeURIComponent(athleteId)}/notifications`),
+        { notifications: [], total: 0, unread: 0 },
       ),
     refetchInterval: 45_000,
     enabled: Boolean(athleteId),
   })
 
   const markAllRead = useMutation({
-    // TODO: implement mark-read endpoint on backend
-    mutationFn: () => Promise.resolve({ ok: true }),
+    mutationFn: () => api.post(`/athlete/${encodeURIComponent(athleteId)}/notifications/read`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['inbox', athleteId] }),
   })
 
   const generate = useMutation({
-    // TODO: implement notification generation endpoint on backend
-    mutationFn: () => Promise.resolve({ ok: true }),
+    mutationFn: () => api.post(`/notifications/generate/${encodeURIComponent(athleteId)}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['inbox', athleteId] }),
   })
 
-  const items = (notifQuery.data?.broadcasts || []).map((b) => ({
-    ...b,
-    type: 'coach_note',
-    title: b.message?.slice(0, 60) || (b.voice_note_url ? 'Voice note from coach' : 'Coach message'),
-    body: b.message || (b.voice_note_url ? 'Voice note attached' : '—'),
-    created_at: b.sent_at || b.created_at,
-    read: false,
-  }))
-  const unread = items.length
+  const items = notifQuery.data?.notifications || []
+  const unread = notifQuery.data?.unread ?? items.filter((n) => !n.read).length
   const byType = groupBy(items, 'type')
 
   return (
