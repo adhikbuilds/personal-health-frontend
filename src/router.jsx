@@ -17,6 +17,8 @@ import { UnifiedAthleteDetailPage } from './pages/UnifiedAthleteDetailPage'
 import { SessionPage } from './pages/SessionPage'
 import { ParentSummaryPage } from './pages/parent/ParentSummaryPage'
 import { ParentDigestPage } from './pages/parent/ParentDigestPage'
+import { FeedPage } from './pages/FeedPage'
+import { HuddleLivePage } from './pages/HuddleLivePage'
 import { LoadingBlock } from './components/Primitives'
 import { useUser } from './context/UserContext'
 
@@ -176,6 +178,21 @@ const messagingRoute = createRoute({
   component: MessagingPage,
 })
 
+const feedRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/feed',
+  component: FeedPage,
+})
+
+const huddleLiveRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/huddle/$huddleId',
+  component: function HuddleWrap() {
+    const { huddleId } = huddleLiveRoute.useParams()
+    return <HuddleLivePage huddleId={huddleId} />
+  },
+})
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -192,6 +209,8 @@ const routeTree = rootRoute.addChildren([
   drillLibraryRoute,
   performanceReportsRoute,
   messagingRoute,
+  feedRoute,
+  huddleLiveRoute,
 ])
 
 export const router = createRouter({

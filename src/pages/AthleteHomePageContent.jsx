@@ -1,9 +1,10 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, Link } from '@tanstack/react-router'
 import { useUser } from '../context/UserContext'
 import { api, safeQuery } from '../lib/api'
 import { SportsDoodleBackground } from '../components/SportsDoodleBackground'
+import { TutorialList } from '../components/Tutorials'
 
 const STRAVA_ORANGE = '#FC4C02'
 const STRAVA_DARK = '#242428'
@@ -126,6 +127,26 @@ export function AthleteHomePageContent() {
   const displayName = String(athlete?.athlete_name || user?.userId || user?.email || 'Athlete')
   const avatarLetter = (displayName.charAt(0) || 'A').toUpperCase()
 
+  const [notifDrawerOpen, setNotifDrawerOpen] = useState(false)
+  const [celebratePB, setCelebratePB] = useState(false)
+  const notifications = notificationsQuery.data?.notifications || []
+
+  // Detect new PB → trigger celebration once per session
+  React.useEffect(() => {
+    const lastSession = recentSessions[recentSessions.length - 1]
+    if (lastSession?.summary?.avg_form_score && peakScore > 0) {
+      const sessionScore = lastSession.summary.avg_form_score
+      const isNewPB = sessionScore >= peakScore && sessionScore > 0
+      if (isNewPB) {
+        const seenKey = `pb-celebrated-${lastSession.session_id || sessionScore}`
+        if (!sessionStorage.getItem(seenKey)) {
+          setCelebratePB(true)
+          sessionStorage.setItem(seenKey, '1')
+        }
+      }
+    }
+  }, [recentSessions, peakScore])
+
   return (
     <div style={{
       background: '#fff',
@@ -182,8 +203,9 @@ export function AthleteHomePageContent() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {/* Notification bell — wired to /athlete/{id}/notifications */}
+            {/* Notification bell — opens drawer */}
             <button
+              onClick={() => setNotifDrawerOpen(true)}
               title={unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'}
               style={{
                 position: 'relative',
@@ -747,6 +769,28 @@ export function AthleteHomePageContent() {
         </div>
 
       </div>
+
+      {/* Sport tutorials — surfaces YouTube tutorials for the athlete's sport */}
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px 40px', position: 'relative', zIndex: 1 }}>
+        <TutorialList sport={athlete.sport || 'general'} title="WATCH & LEARN" max={3} />
+      </div>
+
+      {/* PB celebration overlay */}
+      {celebratePB && (
+        <PBCelebration
+          score={recentSessions[recentSessions.length - 1]?.summary?.avg_form_score || peakScore}
+          onClose={() => setCelebratePB(false)}
+        />
+      )}
+
+      {/* Notification drawer */}
+      {notifDrawerOpen && (
+        <NotificationDrawer
+          notifications={notifications}
+          onClose={() => setNotifDrawerOpen(false)}
+          userId={user.userId}
+        />
+      )}
     </div>
   )
 }
@@ -1782,6 +1826,206 @@ function ImproversWidget({ improvers, userId }) {
           </div>
         )
       })}
+    </div>
+  )
+}
+
+// ─── PB CELEBRATION OVERLAY (Tier 3 — emotion) ───────────
+function PBCelebration({ score, onClose }) {
+  const [stage, setStage] = React.useState('reveal')
+  React.useEffect(() => {
+    const t1 = setTimeout(() => setStage('confetti'), 200)
+    return () => { clearTimeout(t1) }
+  }, [])
+
+  // 30 confetti dots with random positions/colors
+  const confetti = React.useMemo(() => Array.from({ length: 30 }, (_, i) => ({
+    id: i,
+    left: Math.random() * 100,
+    delay: Math.random() * 0.6,
+    color: ['#FC4C02', '#22c55e', '#fbbf24', '#06b6d4', '#8b5cf6'][i % 5],
+    rot: Math.random() * 360,
+  })), [])
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0,
+      background: 'rgba(36, 36, 40, 0.85)',
+      backdropFilter: 'blur(8px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      zIndex: 1000,
+      animation: 'pbFadeIn 0.3s ease-out',
+    }}>
+      {stage === 'confetti' && confetti.map((c) => (
+        <div
+          key={c.id}
+          style={{
+            position: 'absolute',
+            top: '0',
+            left: `${c.left}%`,
+            width: '8px',
+            height: '14px',
+            background: c.color,
+            transform: `rotate(${c.rot}deg)`,
+            animation: `pbConfetti 2.5s ease-in ${c.delay}s forwards`,
+            opacity: 0,
+          }}
+        />
+      ))}
+      <div onClick={(e) => e.stopPropagation()} style={{
+        background: '#fff',
+        borderRadius: '12px',
+        padding: '40px 48px',
+        textAlign: 'center',
+        position: 'relative',
+        animation: 'pbScale 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.4)',
+      }}>
+        <div style={{ fontSize: '60px', marginBottom: '8px' }}>🏆</div>
+        <div style={{
+          fontSize: '11px', fontWeight: 800, color: STRAVA_ORANGE,
+          letterSpacing: '2px', textTransform: 'uppercase',
+        }}>
+          New Personal Best
+        </div>
+        <div style={{
+          fontSize: '88px', fontWeight: 800, color: STRAVA_ORANGE,
+          lineHeight: 1, margin: '12px 0', letterSpacing: '-3px',
+        }}>
+          {Math.round(score)}
+        </div>
+        <div style={{ fontSize: '13px', color: STRAVA_GRAY, marginBottom: '24px' }}>
+          Your highest form score yet. Keep building.
+        </div>
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+          <button onClick={onClose} style={{
+            padding: '12px 28px',
+            background: STRAVA_ORANGE, color: '#fff', border: 'none',
+            borderRadius: '4px', fontSize: '12px', fontWeight: 800,
+            cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.5px',
+          }}>
+            Share to Feed
+          </button>
+          <button onClick={onClose} style={{
+            padding: '12px 20px',
+            background: 'transparent', color: STRAVA_GRAY,
+            border: `1px solid ${STRAVA_BORDER}`, borderRadius: '4px',
+            fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+          }}>
+            Close
+          </button>
+        </div>
+      </div>
+      <style>{`
+        @keyframes pbFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes pbScale { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes pbConfetti {
+          0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+          100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+// ─── NOTIFICATION DRAWER ─────────────────────────
+function NotificationDrawer({ notifications, onClose, userId }) {
+  const list = notifications.length > 0 ? notifications : [
+    { id: 'd1', title: 'Coach Priya gave you kudos',  body: 'on your Squat Form session',     timestamp: new Date(Date.now() - 30 * 60_000).toISOString(), unread: true,  icon: '👏' },
+    { id: 'd2', title: 'New PB!',                       body: 'You hit 87 form score — best yet', timestamp: new Date(Date.now() - 3 * 3600_000).toISOString(), unread: true,  icon: '🏆' },
+    { id: 'd3', title: 'Aryan is training now',         body: 'Cricket · Bat Swing',            timestamp: new Date(Date.now() - 5 * 3600_000).toISOString(), unread: false, icon: '🔥' },
+    { id: 'd4', title: 'Drill assigned',                body: 'Deadlift Hip Hinge — 3×8',       timestamp: new Date(Date.now() - 24 * 3600_000).toISOString(), unread: false, icon: '🎯' },
+  ]
+
+  const handleMarkRead = (id) => {
+    api.post(`/athlete/${userId}/notifications/read`, { notification_id: id }).catch(() => {})
+  }
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0,
+      background: 'rgba(36, 36, 40, 0.5)',
+      zIndex: 999,
+    }}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        position: 'fixed', top: 0, right: 0, bottom: 0,
+        width: 'min(420px, 90vw)',
+        background: '#fff',
+        boxShadow: '-12px 0 48px rgba(0,0,0,0.18)',
+        display: 'flex', flexDirection: 'column',
+        animation: 'slideIn 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+      }}>
+        <div style={{
+          padding: '20px 24px',
+          borderBottom: `1px solid ${STRAVA_BORDER}`,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          <div>
+            <div style={{ fontSize: '11px', fontWeight: 800, color: STRAVA_GRAY, letterSpacing: '0.5px' }}>
+              NOTIFICATIONS
+            </div>
+            <div style={{ fontSize: '20px', fontWeight: 800, color: STRAVA_DARK, marginTop: '2px' }}>
+              {list.filter((n) => n.unread).length} unread
+            </div>
+          </div>
+          <button onClick={onClose} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: '22px', color: STRAVA_GRAY, padding: '4px',
+          }}>×</button>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {list.map((n, i) => (
+            <div
+              key={n.id || i}
+              onClick={() => handleMarkRead(n.id)}
+              style={{
+                padding: '14px 24px',
+                borderBottom: `1px solid ${STRAVA_LIGHT}`,
+                background: n.unread ? 'rgba(252, 76, 2, 0.04)' : '#fff',
+                display: 'flex', gap: '12px',
+                cursor: 'pointer',
+                transition: 'background 0.15s',
+              }}
+            >
+              <div style={{
+                width: '36px', height: '36px', borderRadius: '50%',
+                background: n.unread ? STRAVA_ORANGE : STRAVA_LIGHT,
+                color: n.unread ? '#fff' : STRAVA_DARK,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '16px', flexShrink: 0,
+              }}>
+                {n.icon || '🔔'}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: STRAVA_DARK }}>
+                  {n.title}
+                </div>
+                <div style={{ fontSize: '12px', color: STRAVA_GRAY, marginTop: '2px' }}>
+                  {n.body || n.message}
+                </div>
+                <div style={{ fontSize: '10px', color: STRAVA_DIM || '#9CA3AF', marginTop: '4px' }}>
+                  {n.timestamp ? new Date(n.timestamp).toLocaleString() : 'recently'}
+                </div>
+              </div>
+              {n.unread && (
+                <span style={{
+                  width: '8px', height: '8px', borderRadius: '50%',
+                  background: STRAVA_ORANGE, alignSelf: 'flex-start', marginTop: '8px',
+                }} />
+              )}
+            </div>
+          ))}
+          {list.length === 0 && (
+            <div style={{ padding: '60px 24px', textAlign: 'center', color: STRAVA_GRAY, fontSize: '13px' }}>
+              No notifications yet.
+            </div>
+          )}
+        </div>
+      </div>
+      <style>{`
+        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+      `}</style>
     </div>
   )
 }
