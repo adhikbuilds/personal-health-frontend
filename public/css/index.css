@@ -329,7 +329,7 @@ main {
   .system-grid { grid-template-columns: 1fr; }
   .stats-row { gap: 16px; }
   .nav-links { display: none; }
-  .btn-nav { display: none; }
+  .status-text { display: none; }
 }
 
 @media (max-width: 480px) {
@@ -337,6 +337,8 @@ main {
   .hero { padding: 40px 1rem 28px; }
   .hero h1 { font-size: 1.6rem; }
   .hero p { font-size: 0.9rem; }
+  .hero-actions { flex-direction: column; align-items: center; }
+  .hero-stats { grid-template-columns: 1fr 1fr; gap: 10px; }
   .stats-row { grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 1rem; }
   .stat-val { font-size: 1.6rem; }
   .features { grid-template-columns: 1fr; padding: 0 1rem; }
@@ -344,5 +346,5 @@ main {
   .leaderboard { padding: 0 1rem; }
   .lb-table { font-size: 12px; }
   .system-grid { grid-template-columns: 1fr; padding: 0 1rem; }
-  .btn-nav { display: none; }
+  .status-dot, .status-text { display: none; }
 }
