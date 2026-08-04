@@ -230,7 +230,6 @@ export function CoachMorningPage({ coachId }) {
         <Panel title="Coach tools" kicker="Quick actions">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {[
-              { label: 'Share invite link',    hint: 'Add athletes to your roster via WhatsApp', icon: '→', href: `/coach/${coachId}/invite-links` },
               { label: 'Team wellness detail', hint: 'Full nutrition + recovery breakdown',       icon: '→', href: '/wellness' },
             ].map(({ label, hint, icon, href }) => (
               <a key={label} href={href} style={{ textDecoration: 'none' }}>

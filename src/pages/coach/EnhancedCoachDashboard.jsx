@@ -10,7 +10,6 @@ export function EnhancedCoachDashboard() {
   const navigate = useNavigate()
   const [sortBy, setSortBy] = useState('urgency')
   const [filterRisk, setFilterRisk] = useState('all')
-  const [inviteOpen, setInviteOpen] = useState(false)
 
   useEffect(() => { if (!user) navigate({ to: '/login' }) }, [user, navigate])
 
@@ -101,27 +100,6 @@ export function EnhancedCoachDashboard() {
       />
 
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px' }}>
-        {/* Action bar — Invite button (Sprint #3) */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
-          <button
-            onClick={() => setInviteOpen(true)}
-            style={{
-              padding: '10px 20px',
-              background: ORANGE,
-              color: '#fff',
-              border: 'none',
-              borderRadius: '4px',
-              fontSize: '12px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-            }}
-          >
-            🔗 Invite Athletes
-          </button>
-        </div>
-
         {/* Coach Morning Priorities (Sprint #2) */}
         <CoachPriorities priorities={prioritiesQuery.data?.priorities || prioritiesQuery.data || []} />
 
@@ -389,10 +367,6 @@ export function EnhancedCoachDashboard() {
         </StravaCard>
       </div>
 
-      {/* Invite athletes modal (Sprint #3) */}
-      {inviteOpen && (
-        <CoachInviteModal coachId={user.userId} onClose={() => setInviteOpen(false)} />
-      )}
     </StravaLayout>
   )
 }
@@ -469,92 +443,6 @@ function CoachPriorities({ priorities }) {
   )
 }
 
-// ─── COACH INVITE LINK MODAL (Sprint #3)
-function CoachInviteModal({ coachId, onClose }) {
-  const [link, setLink] = React.useState(null)
-  const [copied, setCopied] = React.useState(false)
-
-  React.useEffect(() => {
-    api.post(`/coach/${coachId}/invite-link`, {})
-      .then((res) => {
-        const url = res?.invite_url || res?.url || `${window.location.origin}/invite/${res?.token || 'demo'}`
-        setLink(url)
-      })
-      .catch(() => {
-        setLink(`${window.location.origin}/invite/demo-token-${Date.now().toString(36)}`)
-      })
-  }, [coachId])
-
-  const handleCopy = () => {
-    if (!link) return
-    navigator.clipboard?.writeText(link)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  return (
-    <div onClick={onClose} style={{
-      position: 'fixed', inset: 0,
-      background: 'rgba(36, 36, 40, 0.6)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      zIndex: 300, padding: '20px',
-    }}>
-      <div onClick={(e) => e.stopPropagation()} style={{
-        background: '#fff',
-        borderRadius: '8px',
-        maxWidth: '480px', width: '100%',
-        padding: '32px',
-        boxShadow: '0 24px 64px rgba(0,0,0,0.3)',
-      }}>
-        <div style={{ fontSize: '11px', fontWeight: 800, color: ORANGE, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          Invite Athletes
-        </div>
-        <h2 style={{ fontSize: '24px', fontWeight: 800, color: DARK, margin: '6px 0 8px 0', letterSpacing: '-0.5px' }}>
-          Share this link
-        </h2>
-        <p style={{ fontSize: '13px', color: GRAY, margin: '0 0 20px 0', lineHeight: 1.5 }}>
-          Send this link to your athletes. When they tap it, they'll join your roster automatically.
-        </p>
-        <div style={{
-          background: LIGHT,
-          border: `1px solid ${BORDER}`,
-          borderRadius: '4px',
-          padding: '14px',
-          fontFamily: 'monospace',
-          fontSize: '12px',
-          color: DARK,
-          marginBottom: '16px',
-          wordBreak: 'break-all',
-        }}>
-          {link || 'Generating link…'}
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={handleCopy} disabled={!link} style={{
-            flex: 1, padding: '12px',
-            background: copied ? '#22c55e' : ORANGE, color: '#fff',
-            border: 'none', borderRadius: '4px',
-            fontSize: '12px', fontWeight: 800,
-            cursor: link ? 'pointer' : 'not-allowed',
-            textTransform: 'uppercase', letterSpacing: '0.5px',
-          }}>
-            {copied ? '✓ Copied!' : 'Copy Link'}
-          </button>
-          <button onClick={onClose} style={{
-            padding: '12px 20px',
-            background: 'transparent',
-            border: `1px solid ${BORDER}`,
-            color: GRAY,
-            borderRadius: '4px',
-            fontSize: '12px', fontWeight: 700,
-            cursor: 'pointer',
-          }}>
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 function BigStat({ label, value, unit, accent, danger }) {
   return (
