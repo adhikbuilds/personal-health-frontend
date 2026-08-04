@@ -6,7 +6,7 @@ const fs = require('fs');
 const http = require('http');
 const path = require('path');
 const express = require('express');
-const { createProxyMiddleware } = require('http-proxy-middleware');
+const { createProxyMiddleware, fixRequestBody } = require('http-proxy-middleware');
 
 const PROXY_PORT = parseInt(process.env.PROXY_PORT || '8083', 10);
 const FASTAPI_PORT = parseInt(process.env.FASTAPI_PORT || '8082', 10);
@@ -87,6 +87,11 @@ app.use('/api', createProxyMiddleware({
   timeout: 20000,
   proxyTimeout: 20000,
   on: {
+    // express.json() above has already consumed the request stream, so the
+    // proxy would forward a body-less request and the upstream would wait for
+    // a body that never arrives — every POST/PUT/PATCH hung until timeout.
+    // fixRequestBody re-serialises req.body onto the proxied request.
+    proxyReq: fixRequestBody,
     error(err, req, res) {
       if (res.headersSent) return;
       if (err.code === 'ECONNREFUSED') {
@@ -110,6 +115,9 @@ app.use('/', createProxyMiddleware({
   timeout: 20000,
   proxyTimeout: 20000,
   on: {
+    // This filter forwards every non-GET request, so it hits the same
+    // drained-body problem as the /api proxy above. See the note there.
+    proxyReq: fixRequestBody,
     error(err, req, res) {
       if (res.headersSent) return;
       if (err.code === 'ECONNREFUSED') {
