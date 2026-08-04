@@ -5,7 +5,9 @@
 //   request with the new token, and otherwise clears the auth cache so the
 //   AuthGate can route the user to /login.
 
-const runtimeConfig = typeof window !== 'undefined' ? window.AB_CONFIG || {} : {}
+// PH_CONFIG is current; AB_CONFIG is the legacy alias /config.js still emits.
+const runtimeConfig =
+  typeof window !== 'undefined' ? window.PH_CONFIG || window.AB_CONFIG || {} : {}
 
 export const API_BASE = import.meta.env.VITE_API_BASE || runtimeConfig.API_BASE || '/api'
 

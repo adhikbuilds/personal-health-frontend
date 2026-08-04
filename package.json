@@ -1,7 +1,7 @@
 {
-  "name": "activebharat-frontend",
+  "name": "personal-health-frontend",
   "version": "2.0.0",
-  "description": "ActiveBharat | Project Eklavya — Dynamic Node.js web frontend with real-time biomechanics dashboard",
+  "description": "Personal Health — Dynamic Node.js web frontend with real-time biomechanics dashboard",
   "main": "server.js",
   "scripts": {
     "dev": "vite",

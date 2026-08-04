@@ -55,7 +55,14 @@ app.use((req, res, next) => {
 app.get('/config.js', (req, res) => {
   res.type('application/javascript');
   res.setHeader('Cache-Control', 'no-cache');
-  res.send(`window.AB_CONFIG = ${JSON.stringify(buildConfig(), null, 2)};`);
+  // PH_CONFIG is the current name; AB_CONFIG is the legacy ActiveBharat-era
+  // alias, still read by src/lib/api.js and the remaining EJS views. Emitting
+  // both keeps those working while callers migrate — do not drop AB_CONFIG
+  // until nothing references it (npm run build does NOT compile EJS, so a
+  // missed view would fail silently at runtime).
+  res.send(
+    `window.PH_CONFIG = window.AB_CONFIG = ${JSON.stringify(buildConfig(), null, 2)};`
+  );
 });
 
 // Note: legacy EJS server-side rendering routes (/, /dashboard, /map,
