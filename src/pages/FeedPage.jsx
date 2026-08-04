@@ -189,10 +189,10 @@ function FeedCard({ item, currentUserId, isLive }) {
   const sessionId = item.session_id || item.id
 
   const sendKudos = useMutation({
-    mutationFn: () => api.post(`/athlete/${item.athlete_id}/claps`, {
-      from_athlete_id: currentUserId,
-      session_id: sessionId,
-    }).catch(() => null),
+    // Path order matters: the {athlete_id} segment is the clapper (the backend
+    // ownership-checks it against the caller), {target_id} is who receives it.
+    mutationFn: () => api.post(`/athlete/${currentUserId}/clap/${item.athlete_id}`, {})
+      .catch(() => null),
   })
 
   const toggleKudos = () => {

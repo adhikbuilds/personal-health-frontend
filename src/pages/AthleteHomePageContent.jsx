@@ -66,7 +66,7 @@ export function AthleteHomePageContent() {
   const streaksQuery = useQuery({
     queryKey: ['streaks', user.userId],
     queryFn: () => safeQuery(
-      () => api.get(`/athlete/${user.userId}/streaks`),
+      () => api.get(`/streak/${user.userId}`),
       { current_streak: 0, longest_streak: 0 }
     ),
   })

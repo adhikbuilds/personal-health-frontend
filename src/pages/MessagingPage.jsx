@@ -54,7 +54,7 @@ export function MessagingPage() {
       }
     } else {
       // Athlete: show broadcasts from coaches
-      const data = await safeQuery(() => api.get(`/inbox/athlete/${userId}`), null)
+      const data = await safeQuery(() => api.get(`/coach/inbox/athlete/${userId}`), null)
       const broadcasts = (data?.broadcasts || []).map(b => ({
         athlete_id: b.coach_id || 'coach',
         athlete_name: b.coach_name || 'Coach',
