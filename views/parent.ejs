@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personal Health — Safety Summary</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0e1a;
+      color: #f9fafb;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    .card {
+      background: #111827;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 36px 32px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 32px;
+    }
+    .logo-mark {
+      background: #06b6d4;
+      color: #0a0e1a;
+      font-size: 13px;
+      font-weight: 800;
+      padding: 5px 9px;
+      border-radius: 8px;
+      letter-spacing: 0.5px;
+    }
+    .logo-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #f9fafb;
+    }
+
+    .headline {
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 8px;
+    }
+    .headline.safe   { color: #22c55e; }
+    .headline.medium { color: #f59e0b; }
+    .headline.high   { color: #ef4444; }
+
+    .subline {
+      font-size: 14px;
+      color: #9ca3af;
+      margin-bottom: 28px;
+      line-height: 1.6;
+    }
+
+    .risk-bar-wrap {
+      margin-bottom: 28px;
+    }
+    .risk-bar-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #9ca3af;
+      margin-bottom: 8px;
+    }
+    .risk-bar-track {
+      height: 8px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .risk-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.6s ease;
+    }
+    .risk-bar-fill.low    { width: 20%;  background: #22c55e; }
+    .risk-bar-fill.medium { width: 55%;  background: #f59e0b; }
+    .risk-bar-fill.high   { width: 92%;  background: #ef4444; }
+
+    .risk-reason {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-top: 8px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .stat {
+      background: rgba(255,255,255,0.04);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    .stat-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #9ca3af;
+      margin-bottom: 4px;
+    }
+    .stat-value {
+      font-size: 20px;
+      font-weight: 800;
+      color: #f9fafb;
+    }
+    .stat-value.cyan { color: #06b6d4; }
+
+    .volume-badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .volume-badge.light    { background: rgba(148,163,184,0.15); color: #94a3b8; }
+    .volume-badge.moderate { background: rgba(6,182,212,0.15);   color: #06b6d4; }
+    .volume-badge.heavy    { background: rgba(245,158,11,0.15);   color: #f59e0b; }
+
+    .summary-box {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 14px;
+      color: #e2e8f0;
+      line-height: 1.7;
+      margin-bottom: 24px;
+    }
+
+    .footer {
+      font-size: 12px;
+      color: #4b5563;
+      text-align: center;
+      line-height: 1.6;
+    }
+    .footer a { color: #06b6d4; text-decoration: none; }
+
+    .error-state {
+      text-align: center;
+      padding: 40px 0;
+    }
+    .error-state .icon { font-size: 40px; margin-bottom: 16px; }
+    .error-state h2 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .error-state p  { font-size: 14px; color: #9ca3af; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+
+  <div class="logo">
+    <span class="logo-mark">PH</span>
+    <span class="logo-name">Personal Health</span>
+  </div>
+
+  <% if (error) { %>
+
+    <div class="error-state">
+      <div class="icon">🔒</div>
+      <h2>Access unavailable</h2>
+      <p><%= error %></p>
+    </div>
+
+  <% } else { %>
+
+    <%
+      const riskLevel = summary.injury_risk_level;
+      const headlineText = riskLevel === 'low'
+        ? 'Training safely'
+        : riskLevel === 'medium'
+        ? 'Training actively — worth checking in'
+        : 'Elevated risk — consider reaching out';
+    %>
+
+    <h1 class="headline <%= riskLevel %>"><%= headlineText %></h1>
+    <p class="subline">
+      Safety summary for <strong><%= summary.athlete_name || 'your athlete' %></strong>
+      &middot; <%= summary.sport || 'sport not set' %>
+    </p>
+
+    <!-- Injury risk bar -->
+    <div class="risk-bar-wrap">
+      <div class="risk-bar-label">Injury risk</div>
+      <div class="risk-bar-track">
+        <div class="risk-bar-fill <%= riskLevel %>"></div>
+      </div>
+      <p class="risk-reason"><%= summary.injury_risk_reason %></p>
+    </div>
+
+    <!-- Stats grid -->
+    <div class="stats-grid">
+      <div class="stat">
+        <div class="stat-label">Sessions this week</div>
+        <div class="stat-value cyan"><%= summary.sessions_last_7_days %></div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Last session</div>
+        <div class="stat-value" style="font-size:15px;padding-top:3px;">
+          <%= summary.last_session_date || 'No sessions yet' %>
+        </div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Training load</div>
+        <div class="stat-value" style="font-size:15px;padding-top:3px;">
+          <span class="volume-badge <%= summary.training_volume %>">
+            <%= summary.training_volume.charAt(0).toUpperCase() + summary.training_volume.slice(1) %>
+          </span>
+        </div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Sport</div>
+        <div class="stat-value" style="font-size:15px;padding-top:3px;">
+          <%= (summary.sport || '—').replace(/_/g,' ') %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary sentence -->
+    <div class="summary-box"><%= summary.summary_sentence %></div>
+
+    <p class="footer">
+      This view shows only safety-relevant signals.<br>
+      Detailed scores and session data are private to the athlete.<br><br>
+      Powered by <a href="https://personalhealth.app">Personal Health</a>
+    </p>
+
+  <% } %>
+
+</div>
+
+</body>
+</html>

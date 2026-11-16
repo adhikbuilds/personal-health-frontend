@@ -1,166 +1,72 @@
-/**
- * Personal Health — Dynamic Frontend Service
- * ============================================
- * Node.js + Express server that renders all pages server-side using EJS,
- * injects runtime configuration (API URLs, LAN IP), fetches live data from
- * the FastAPI backend before rendering, and proxies API + WebSocket traffic.
- *
- * Routes:
- *   GET /             → Landing page (index.ejs) — live athlete + session count
- *   GET /dashboard    → Biomechanics dashboard (dashboard.ejs) — injected WS URL
- *   GET /map          → GPS Map (map.ejs) — injected backend base
- *
- *   GET /config.js    → Dynamic JS blob: window.AB_CONFIG = {...}
- *   GET /api/status   → Proxied health from FastAPI
- *   /api/*            → Transparent proxy to FastAPI (strips /api prefix)
- *   All other routes  → Transparent proxy (phone app connectivity)
- *   ws://.../ws/*     → WebSocket proxy to FastAPI
- *
- * How to run:
- *   npm install
- *   npm start
- */
-
-'use strict';
-
 require('dotenv').config();
 
-const path   = require('path');
-const http   = require('http');
+const fs = require('node:fs');
+const http = require('node:http');
+const path = require('node:path');
 const express = require('express');
-const { createProxyMiddleware } = require('http-proxy-middleware');
+const { createProxyMiddleware, fixRequestBody } = require('http-proxy-middleware');
 
-// ── Config ─────────────────────────────────────────────────────────────────
-const PROXY_PORT   = parseInt(process.env.PROXY_PORT   || '8083', 10);
-const FASTAPI_PORT = parseInt(process.env.FASTAPI_PORT || '8082', 10);
+const PROXY_PORT = Number.parseInt(process.env.PROXY_PORT || '8083', 10);
+const FASTAPI_PORT = Number.parseInt(process.env.FASTAPI_PORT || '8082', 10);
 const FASTAPI_HOST = process.env.FASTAPI_HOST || 'localhost';
-const FASTAPI_URL  = `http://${FASTAPI_HOST}:${FASTAPI_PORT}`;
-const APP_ENV      = process.env.APP_ENV || 'development';
+const FASTAPI_URL = `http://${FASTAPI_HOST}:${FASTAPI_PORT}`;
+const DIST_DIR = path.join(__dirname, 'dist');
+const INDEX_FILE = path.join(DIST_DIR, 'index.html');
 
-// ── Runtime Config Object (shared across all pages) ─────────────────────────
-// API_BASE is relative so it works from any IP/hostname.
-// WS_BASE is also left empty — views derive it from window.location at runtime.
 function buildConfig() {
     return {
-        API_BASE:    '/api',
+        API_BASE: '/api',
+        WS_BASE: '/ws',
         PROXY_PORT,
-        APP_ENV,
+        APP_ENV: process.env.APP_ENV || 'development',
     };
 }
 
-// ── Fetch live data from the backend (used at render time) ──────────────────
-async function fetchBackendData(path, fallback = null) {
+async function fetchBackendData(route, fallback = null) {
     try {
-        const res = await fetch(`${FASTAPI_URL}${path}`, { signal: AbortSignal.timeout(2000) });
-        if (!res.ok) return fallback;
-        return await res.json();
+        const response = await fetch(`${FASTAPI_URL}${route}`, {
+            signal: AbortSignal.timeout(2000),
+        });
+        if (!response.ok) return fallback;
+        return await response.json();
     } catch {
         return fallback;
     }
 }
 
-// ── Express App ─────────────────────────────────────────────────────────────
 const app = express();
-
-app.set('view engine', 'ejs');
+app.use(express.json());
 app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'ejs');
 
-// Static assets (CSS, client JS, images)
-app.use('/public', express.static(path.join(__dirname, 'public')));
-
-// ── CORS ────────────────────────────────────────────────────────────────────
 app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
-    if (req.method === 'OPTIONS') { res.sendStatus(204); return; }
+    if (req.method === 'OPTIONS') {
+        res.sendStatus(204);
+        return;
+    }
     next();
 });
 
-// ── Dynamic Config Script ────────────────────────────────────────────────────
-// Browser pages load <script src="/config.js"> to get window.AB_CONFIG
-app.get('/config.js', (req, res) => {
-    res.setHeader('Content-Type', 'application/javascript');
+app.get('/config.js', (_req, res) => {
+    res.type('application/javascript');
     res.setHeader('Cache-Control', 'no-cache');
-    res.send(`window.AB_CONFIG = ${JSON.stringify(buildConfig(), null, 2)};`);
+    // PH_CONFIG is the current name; AB_CONFIG is the legacy pre-rename
+    // alias, still read by src/lib/api.js and the remaining EJS views. Emitting
+    // both keeps those working while callers migrate — do not drop AB_CONFIG
+    // until nothing references it (npm run build does NOT compile EJS, so a
+    // missed view would fail silently at runtime).
+    res.send(`window.PH_CONFIG = window.AB_CONFIG = ${JSON.stringify(buildConfig(), null, 2)};`);
 });
 
-// ── Page Routes ─────────────────────────────────────────────────────────────
+// Note: legacy EJS server-side rendering routes (/, /dashboard, /map,
+// /wellness, /athlete/:id, /session/:id) were removed when the frontend
+// migrated to a Vite/React SPA. All page routing is now client-side via
+// TanStack Router; the catch-all at the end serves dist/index.html.
 
-// Landing Page — fetches live stats before rendering
-app.get('/', async (req, res) => {
-    const [health, leaderboard] = await Promise.all([
-        fetchBackendData('/health',     { status: 'offline', athlete_count: 0, active_sessions: 0 }),
-        fetchBackendData('/leaderboard', { athletes: [] }),
-    ]);
-
-    res.render('index', {
-        config: buildConfig(),
-        currentRoute: '/',
-        backendOnline: health?.status === 'ok',
-        athleteCount:  health?.athlete_count  ?? 0,
-        activeSessions: health?.active_sessions ?? 0,
-        topAthletes:   Array.isArray(leaderboard?.athletes) ? leaderboard.athletes.slice(0, 5) : [],
-    });
-});
-
-// Biomechanics Dashboard
-app.get('/dashboard', async (req, res) => {
-    const health = await fetchBackendData('/health', { status: 'offline' });
-
-    res.render('dashboard', {
-        config: buildConfig(),
-        currentRoute: '/dashboard',
-        backendOnline: health?.status === 'ok',
-    });
-});
-
-// GPS Map
-app.get('/map', async (req, res) => {
-    const health = await fetchBackendData('/health', { status: 'offline' });
-
-    res.render('map', {
-        config: buildConfig(),
-        currentRoute: '/map',
-        backendOnline: health?.status === 'ok',
-    });
-});
-
-// Wellness Dashboard (Sprint W&N-01 — Dev 5)
-app.get('/wellness', async (req, res) => {
-    const health = await fetchBackendData('/health', { status: 'offline' });
-
-    res.render('wellness', {
-        config: buildConfig(),
-        currentRoute: '/wellness',
-        backendOnline: health?.status === 'ok',
-    });
-});
-
-// Athlete Profile Page
-app.get('/athlete/:id', async (req, res) => {
-    const health = await fetchBackendData('/health', { status: 'offline' });
-    res.render('athlete', {
-        config: buildConfig(),
-        backendOnline: health?.status === 'ok',
-        athleteId: req.params.id,
-    });
-});
-
-// Session Detail Page
-app.get('/session/:id', async (req, res) => {
-    const health = await fetchBackendData('/health', { status: 'offline' });
-    res.render('session', {
-        config: buildConfig(),
-        backendOnline: health?.status === 'ok',
-        sessionId: req.params.id,
-    });
-});
-
-// ── API Routes ──────────────────────────────────────────────────────────────
-
-// Convenience status endpoint for the frontend itself
-app.get('/api/status', async (req, res) => {
+app.get('/api/status', async (_req, res) => {
     const health = await fetchBackendData('/health', null);
     res.json({
         frontend: 'ok',
@@ -170,74 +76,158 @@ app.get('/api/status', async (req, res) => {
     });
 });
 
-// /api/* → FastAPI (strips /api prefix)
-app.use('/api', createProxyMiddleware({
-    target: FASTAPI_URL,
-    changeOrigin: true,
-    pathRewrite: { '^/api': '' },
-    timeout: 20000,
-    proxyTimeout: 20000,
-    on: {
-        error(err, req, res) {
-            console.error('[API Proxy] error:', err.message);
-            if (err.code === 'ECONNREFUSED') {
-                res.status(503).json({ error: 'Backend offline', detail: 'Run: python api_server.py' });
-            } else {
-                res.status(502).json({ error: err.message });
+app.use(
+    '/api',
+    createProxyMiddleware({
+        target: FASTAPI_URL,
+        changeOrigin: true,
+        pathRewrite: { '^/api': '' },
+        timeout: 20000,
+        proxyTimeout: 20000,
+        on: {
+            // express.json() above has already consumed the request stream, so the
+            // proxy would forward a body-less request and the upstream would wait for
+            // a body that never arrives — every POST/PUT/PATCH hung until timeout.
+            // fixRequestBody re-serialises req.body onto the proxied request.
+            proxyReq: fixRequestBody,
+            error(err, _req, res) {
+                if (res.headersSent) return;
+                if (err.code === 'ECONNREFUSED') {
+                    res.status(503).json({ error: 'Backend offline', detail: 'Run: python api_server.py' });
+                } else {
+                    res.status(502).json({ error: err.message });
+                }
+            },
+        },
+    }),
+);
+
+app.use(
+    '/',
+    createProxyMiddleware({
+        target: FASTAPI_URL,
+        changeOrigin: true,
+        pathFilter: (pathname, req) => {
+            if (pathname.startsWith('/api') || pathname.startsWith('/ws') || pathname === '/config.js') {
+                return false;
             }
+            return req.method !== 'GET';
         },
-        proxyReq(proxyReq, req) {
-            console.log(`[API] ${req.method} ${req.path} → FastAPI`);
+        timeout: 20000,
+        proxyTimeout: 20000,
+        on: {
+            // This filter forwards every non-GET request, so it hits the same
+            // drained-body problem as the /api proxy above. See the note there.
+            proxyReq: fixRequestBody,
+            error(err, _req, res) {
+                if (res.headersSent) return;
+                if (err.code === 'ECONNREFUSED') {
+                    res.status(503).json({ error: 'Backend offline', code: 503 });
+                } else {
+                    res.status(502).json({ error: err.message, code: 502 });
+                }
+            },
         },
-    },
-}));
+    }),
+);
 
-// ── Phone App Transparent Proxy ──────────────────────────────────────────────
-// Android app hits http://PC_IP:8083/session/start, /rppg/frame etc.
-// Skip known page/static routes, proxy everything else straight to FastAPI.
-const PAGE_ROUTES = ['/', '/dashboard', '/map', '/wellness', '/athlete', '/session', '/public', '/config.js', '/api'];
+if (fs.existsSync(DIST_DIR)) {
+    app.use(express.static(DIST_DIR, { index: false }));
+}
 
-app.use('/', createProxyMiddleware({
-    target: FASTAPI_URL,
-    changeOrigin: true,
-    pathFilter: (pathname) => !PAGE_ROUTES.some(p => pathname === p || pathname.startsWith(p + '/')),
-    timeout: 20000,
-    proxyTimeout: 20000,
-    on: {
-        error(err, req, res) {
-            if (err.code === 'ECONNREFUSED') {
-                res.status(503).json({ error: 'Backend offline', code: 503 });
-            } else {
-                res.status(502).json({ error: err.message, code: 502 });
-            }
-        },
-        proxyReq(proxyReq, req) {
-            console.log(`[Proxy] ${req.method} ${req.url} → FastAPI`);
-        },
-    },
-}));
+// ── Coach inbox (broadcasts + 1:1 messages) ───────────────────────────────
+app.get('/coach/:coachId/inbox', async (req, res) => {
+    const { coachId } = req.params;
+    const health = await fetchBackendData('/health', null);
+    res.render('coach-inbox', { coachId, backendOnline: !!health });
+});
 
-// ── HTTP + WebSocket Server ──────────────────────────────────────────────────
+// ── Coach billing dashboard ────────────────────────────────────────────────
+app.get('/coach/:coachId/billing', async (req, res) => {
+    const { coachId } = req.params;
+    const health = await fetchBackendData('/health', null);
+    res.render('coach-billing', { coachId, backendOnline: !!health });
+});
+
+// ── Athlete inbox (messages + drills + payment banner) ─────────────────────
+app.get('/athlete/:athleteId/inbox', async (req, res) => {
+    const { athleteId } = req.params;
+    const health = await fetchBackendData('/health', null);
+    res.render('athlete-inbox', { athleteId, backendOnline: !!health });
+});
+
+// ── Parent weekly digest (token-based, no login) ───────────────────────────
+app.get('/digest/:token', async (req, res) => {
+    const { token } = req.params;
+    const data = await fetchBackendData(`/parent/${encodeURIComponent(token)}/weekly-digest`, null);
+    if (!data) {
+        return res.status(403).render('parent-digest', {
+            digest: null,
+            error: 'Link not found or expired. Ask your athlete to share a fresh link.',
+        });
+    }
+    return res.render('parent-digest', { digest: data, error: null });
+});
+
+// ── Parent safety summary page ─────────────────────────────────────────────
+// Fetches safety data from the backend using the parent's token, then renders
+// a read-only, privacy-respecting view. No raw scores or session IDs exposed.
+app.get('/parent/:consentId', async (req, res) => {
+    const { consentId } = req.params;
+    const { token } = req.query;
+
+    if (!token) {
+        return res.status(400).render('parent', {
+            summary: null,
+            error: 'Missing access token. Use the link provided by the athlete.',
+        });
+    }
+
+    const data = await fetchBackendData(
+        `/parent/${encodeURIComponent(consentId)}/safety-summary?token=${encodeURIComponent(token)}`,
+        null,
+    );
+
+    if (!data) {
+        return res.status(403).render('parent', {
+            summary: null,
+            error: 'Access denied or link expired. The athlete may have revoked access.',
+        });
+    }
+
+    return res.render('parent', { summary: data, error: null });
+});
+
+app.get('*', (_req, res) => {
+    if (fs.existsSync(INDEX_FILE)) {
+        res.sendFile(INDEX_FILE);
+        return;
+    }
+    res.status(503).send('Frontend build not found. Run "npm run build" in personal-health-frontend first.');
+});
+
 const server = http.createServer(app);
 
-// WebSocket proxy: ws://PC_IP:8083/ws/* → ws://FastAPI
 const wsProxy = createProxyMiddleware({
     target: `ws://${FASTAPI_HOST}:${FASTAPI_PORT}`,
     changeOrigin: true,
     ws: true,
     pathRewrite: { '^/ws': '' },
-    on: { error(err) { console.error('[WS Proxy] error:', err.message); } },
+    on: {
+        error(err) {
+            console.error('[WS Proxy] error:', err.message);
+        },
+    },
 });
+
 server.on('upgrade', wsProxy.upgrade);
 
-// ── Startup ──────────────────────────────────────────────────────────────────
 server.listen(PROXY_PORT, '0.0.0.0', () => {
-    console.log(`\n  Personal Health — Frontend`);
-    console.log(`  ───────────────────────────────────────`);
+    console.log('\n  Personal Health — TanStack Frontend');
+    console.log('  ───────────────────────────────────────');
     console.log(`  http://localhost:${PROXY_PORT}/`);
-    console.log(`  http://localhost:${PROXY_PORT}/dashboard`);
-    console.log(`  http://localhost:${PROXY_PORT}/map`);
-    console.log(`  Backend: ${FASTAPI_URL}\n`);
+    console.log(`  Backend proxy: ${FASTAPI_URL}`);
+    console.log(`  Static build: ${fs.existsSync(INDEX_FILE) ? 'ready' : 'missing'}\n`);
 });
 
 server.on('error', (err) => {
